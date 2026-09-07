@@ -478,3 +478,31 @@
     font-weight: 500;
   }
 }
+
+/* Leviers du benchmark : fond de marque qui s'estompe du premier rang au dernier. */
+.lever-row {
+  --lever-base: var(--brand-ink);
+  --lever-fg-strong: oklch(0.97 0.012 90);
+  background: color-mix(in oklch, var(--lever-base) var(--lever-strength), var(--paper));
+  color: var(--foreground);
+}
+.lever-row .lever-index {
+  color: var(--sand-deep);
+}
+.lever-row .lever-text {
+  color: var(--ink-muted);
+}
+.lever-row[data-strong] {
+  color: var(--lever-fg-strong);
+}
+.lever-row[data-strong] .lever-index,
+.lever-row[data-strong] .lever-text {
+  color: color-mix(in oklch, var(--lever-fg-strong) 78%, transparent);
+}
+.dark .lever-row {
+  --lever-base: var(--brand);
+}
+.dark .lever-row .lever-index,
+.dark .lever-row .lever-text {
+  color: color-mix(in oklch, var(--foreground) 72%, transparent);
+}

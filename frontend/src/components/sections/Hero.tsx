@@ -91,15 +91,15 @@ const tooling = [
 
 const navLinks = [
   { href: "#demo", label: "Démo" },
-  { href: "#resultats", label: "Résultats" },
   { href: "#agents", label: "Agents" },
+  { href: "#resultats", label: "Résultats" },
   { href: "https://github.com/julienlucas/agentic-rag-with-tools", label: "Repo GitHub", external: true },
 ];
 
 
 export function Hero() {
   return (
-    <section id="top" className="border-b border-border/30">
+    <section id="top" className="bg-brand-surface-strong/80 border-b border-border/30">
       <Container className="py-6 sm:py-14">
         <div className="mt-6 flex items-start justify-between gap-8">
           <div className="min-w-0">

@@ -30,7 +30,7 @@ export function Agents() {
   return (
     <Section
       id="agents"
-      index="02"
+      index="01"
       eyebrow="Les agents"
       title={
         <>
