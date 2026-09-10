@@ -98,34 +98,6 @@ const levers = [
   },
 ];
 
-const limits = [
-  {
-    title: "Le recall du retrieval",
-    text: "Sur 8 questions sur 26, la page de preuve n'atteint jamais le modèle, outils compris. Quand elle l'atteint, il répond juste dans 15 cas sur 18.",
-  },
-  {
-    title: "Le modèle est faible",
-    text: (
-      <>
-        Un autre modèle de raisonnement que{" "}
-        <img
-          src="/static/mistral.png"
-          alt="Mistral AI"
-          className="inline-block h-4 w-auto align-text-bottom"
-        />{" "}
-        Ce qui est utilisé utilisé dans ce RAG agentique est Mistral Medium 3, un modèle de raisonnement limité. Pourtant un gros gain se joue ici.
-        Actuellement à contexte strictement identique, des réponses
-        changent de verdict d&apos;un run à l&apos;autre. Un écart d&apos;une ou deux questions ne
-        se lit donc pas comme une amélioration.
-      </>
-    ),
-  },
-  {
-    title: "Le coût en latence",
-    text: "Les outils rendent la génération 2,7× plus lente en moyenne : 12,7 s contre 4,6 s par question, le prix de 3 à 5 appels sur un tiers des questions. Les autres ne changent pas.",
-  },
-];
-
 function Bar({ value, tone, label }: { value: number; tone: "before" | "after" | "mistral"; label: string }) {
   return (
     <Tooltip>
@@ -163,7 +135,7 @@ function Delta({ row }: { row: Row }) {
 function BenchmarkChart() {
   const [table, setTable] = useState(false);
   return (
-    <figure className="card-paper border-border/30 p-8">
+    <figure className="card-paper border-hairline p-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 max-w-2xl">
           <figcaption className="display-sm">
@@ -194,7 +166,7 @@ function BenchmarkChart() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.metric} className="border-t border-border/30">
+              <tr key={r.metric} className="border-t border-hairline">
                 <td className="py-2 font-medium">{r.metric}</td>
                 <td className="py-2 tabular-nums">
                   {r.before.toLocaleString("fr-FR")} %
@@ -242,7 +214,7 @@ function BenchmarkChart() {
                     {r.hint}
                   </span>
                 </div>
-                <div className="relative space-y-0.5 border-l border-border pl-3">
+                <div className="relative space-y-0.5 border-l border-hairline pl-3">
                   <Bar
                     value={r.before}
                     tone="before"
@@ -277,7 +249,8 @@ export function Results() {
       title={
         <>
           Évalué à 83,3 % de réponses correctes sur le benchmark{" "}
-          <span className="accent-italic">FinanceBench</span> (sur 26 questions).
+          <span className="accent-italic">FinanceBench</span> (limité à 4
+          documents et 26 questions).
         </>
       }
       intro="FinanceBench est le benchmark que Mistral utilise pour évaluer leur outil Agentic Search : des questions financières sur des filings SEC denses en tableaux, où chaque chiffre apparaît des dizaines de fois. L'évaluation de mon RAG agentique porte ici sur 26 questions et 4 rapports (AMD, American Express, Boeing, PepsiCo, des documents de 150 à 260 pages)."
@@ -289,22 +262,21 @@ export function Results() {
             key={l.label}
             className={cn(
               "flex h-full flex-col rounded-xl border p-8",
-              l.tone === "muted" && "border-border/30 bg-paper-2",
-              l.tone === "brand" && "border-brand/10 bg-paper shadow-card",
-              l.tone === "ref" &&
-                "border-dashed/30 border-chart-ref/20 bg-paper-2",
+              l.tone === "muted" && "border-hairline bg-chart-after/5",
+              l.tone === "brand" && "bg-chart-after/20 shadow-xl",
+              l.tone === "ref" && "border-hairline bg-chart-ref/5",
             )}
           >
             <div className="flex items-center justify-between">
               <span className="eyebrow">{l.label}</span>
-              <span className="mono-xs text-sand-deep">0{i + 1}</span>
+              <span className="mono-xs text-ink-faint">0{i + 1}</span>
             </div>
             <div className="font-display mt-4 text-5xl font-normal tracking-tight">
               {l.correct}
             </div>
             <div className="mt-1 text-sm font-medium">réponses correctes</div>
             <div className="mono-xs mt-1 text-muted-foreground">{l.wrong}</div>
-            <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-ink-muted">
+            <p className="mt-4 border-t border-hairline pt-3 text-xs leading-relaxed text-ink-muted">
               {l.setup}
             </p>
           </div>
@@ -316,7 +288,7 @@ export function Results() {
       </div>
 
       {/* Ce que les chiffres autorisent à dire — et pas plus. Hors de la carte, exprès. */}
-      <figure className="py-18 grid max-w-4xl gap-x-6 sm:grid-cols-[3.5rem_1fr]">
+      <figure className="pt-18 grid max-w-4xl gap-x-6 sm:grid-cols-[3.5rem_1fr]">
         <span
           aria-hidden
           className="display-xl -mt-3 hidden select-none leading-none text-brand sm:block"
@@ -324,72 +296,54 @@ export function Results() {
           &ldquo;
         </span>
         <div>
-          <span className="eyebrow">Ce que les chiffres autorisent à dire</span>
+          <span className="eyebrow">Ce que les chiffres disent</span>
           <blockquote className="display-md mt-3 text-ink">
-            Sur un sous-ensemble de FinanceBench (4 filings,{" "}
+            Sur un sous-ensemble de FinanceBench (4 documents,{" "}
             <strong className="font-semibold text-ink">26 questions</strong>,
             index combiné), le système répond correctement à{" "}
             <span className="accent-italic">20 des 24 questions jugées</span>,
             avec 4 réponses fausses, aucun refus et 2 erreurs techniques
-            exclues. Le même système sans les outils, à retrieval identique, est
-            à <span className="accent-italic">17 sur 26</span> avec 7 réponses
-            fausses : c&apos;est l&apos;écart qui compte. Le RAG naïf du papier
-            est à ~19 % sur le benchmark complet ; Mistral Agentic Search
-            annonce 86 % sur{" "}
+            exclues. Le RAG naïf plafonne est{" "}
+            <span className="accent-italic">
+              à ~19 % sur le benchmark complet
+            </span>
+            . Mistral Agentic Search annonce 86 % sur{" "}
             <strong className="font-semibold text-ink">150 questions</strong> et
-            368 filings — un périmètre bien plus large, qui n&apos;est pas
-            comparable directement.
+            368 documents — soit un périmètre bien plus large, qui n&apos;est
+            pas comparable directement.
           </blockquote>
         </div>
       </figure>
 
-      <div className="mt-14">
-        <h3 className="display-md max-w-3xl">
-          Ce qui a été fait pour passer à ce résultat :
-        </h3>
+      <div className="mt-16">
+        <h3 className="display-md max-w-3xl">Ce qui a été fait</h3>
         <ol className="mt-6 space-y-1">
           {levers.map((l, i) => {
-            // Du plus foncé (plus gros gain) au plus clair : la teinte de marque s'estompe à chaque rang.
-            const strength = 1 - (i / (levers.length - 1)) * 0.92;
-            const strong = strength > 0.6;
+            // Du plus gros gain au plus faible : un or déjà léger au premier rang, qui
+            // s'estompe jusqu'au papier au dernier. Le premier rang se marque au filet, pas
+            // à la saturation — la teinte reste discrète sur toute la série.
+            const strength = 0.2 - (i / (levers.length - 1)) * 0.185;
+            const strong = i === 0;
             return (
               <li
                 key={l.title}
                 data-strong={strong || undefined}
-                className="lever-row grid gap-1 rounded-md px-4 py-4 sm:grid-cols-[2rem_16rem_1fr] sm:gap-4"
-                style={{ "--lever-strength": `${Math.round(strength * 100)}%` } as CSSProperties}
+                className="lever-row grid gap-1 rounded-sm px-4 py-4 sm:grid-cols-[2rem_16rem_1fr] sm:gap-4"
+                style={
+                  {
+                    "--lever-strength": `${Math.round(strength * 100)}%`,
+                  } as CSSProperties
+                }
               >
                 <span className="lever-index mono-xs pt-1">0{i + 1}</span>
                 <span className="text-sm font-medium">{l.title}</span>
-                <span className="lever-text text-sm leading-relaxed">{l.text}</span>
+                <span className="lever-text text-sm leading-relaxed">
+                  {l.text}
+                </span>
               </li>
             );
           })}
         </ol>
-      </div>
-
-      <div className="mt-14">
-        <div className="flex flex-col">
-          <p className="display-md mt-3">Ce qui limite encore</p>
-          <ol className="mt-6 divide-y divide-border border-t border-border">
-            {limits.map((l, i) => (
-              <li
-                key={l.title}
-                className="grid gap-1 py-4 sm:grid-cols-[2rem_16rem_1fr] sm:gap-4"
-              >
-                <span className="mono-xs pt-1 text-sand-deep">0{i + 1}</span>
-                <span className="text-sm font-medium">{l.title}</span>
-                <span className="text-sm leading-relaxed text-ink-muted">
-                  {l.text}
-                </span>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-4 border-t border-sand pt-3 text-xs leading-relaxed text-muted-foreground">
-            26 questions d'évaluation sur 4 filings : assez pour repérer les
-            modes d'échec, trop peu pour se comparer à un benchmark complet.
-          </p>
-        </div>
       </div>
     </Section>
   );

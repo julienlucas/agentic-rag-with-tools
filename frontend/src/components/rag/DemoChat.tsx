@@ -47,7 +47,9 @@ function CollapsibleAnswer({ children }: { children: ReactNode }) {
         className="relative overflow-hidden transition-[max-height] duration-300"
         style={{ maxHeight: collapsed ? MAX_ANSWER_H : fullHeight }}
       >
-        <div ref={inner}>{children}</div>
+        <div ref={inner} className="!text-xs !leading-relaxed !text-ink-muted">
+          {children}
+        </div>
         {overflows && !open ? (
           <span
             aria-hidden
@@ -62,7 +64,9 @@ function CollapsibleAnswer({ children }: { children: ReactNode }) {
           className="mono-xs mt-2 inline-flex items-center gap-1 text-brand-deep transition-colors hover:text-brand-strong cursor-pointer"
         >
           {open ? "Réduire" : "Voir la suite"}
-          <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />
+          <ChevronDown
+            className={cn("size-3 transition-transform", open && "rotate-180")}
+          />
         </button>
       ) : null}
     </div>
@@ -96,7 +100,7 @@ function CitedSources({ answer, citations }: { answer: string; citations: Citati
     .filter((c): c is Citation => Boolean(c));
   if (!used.length) return null;
   return (
-    <div className="mt-3 border-t border-border pt-3">
+    <div className="mt-3 border-t border-hairline pt-3">
       <span className="eyebrow">Passages cités</span>
       <ul className="mt-2 space-y-1.5">
         {used.map((c) => (
@@ -120,7 +124,7 @@ function Marker({ kind }: { kind: "q" | "r" }) {
       className={cn(
         "mt-[0.09rem] grid size-5 shrink-0 place-items-center rounded font-mono text-[0.7rem] font-semibold",
         kind === "q"
-          ? "text-[oklch(0.74_0.15_30)]"
+          ? "text-brand-deep"
           : "text-success",
       )}
     >
@@ -324,7 +328,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
         La réponse
       </h3>
 
-      <div className="card-paper bg-white border-border/70 overflow-hidden">
+      <div className="card-paper bg-white overflow-hidden">
         <div>
           {/* conversation */}
           <div className="flex min-h-[28rem] flex-col">
@@ -357,7 +361,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                             s
                           </span>
                         </div>
-                        <div className="flex gap-2.5 rounded-2xl border border-border bg-paper-2 px-4 py-3.5">
+                        <div className="flex gap-2.5 rounded-2xl border border-hairline bg-paper-2 px-4 py-3.5">
                           <Marker kind="r" />
                           <div className="min-w-0 flex-1">
                             <CollapsibleAnswer>
@@ -399,7 +403,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                             type="button"
                             disabled={!ready}
                             onClick={() => ask(s.text)}
-                            className="group flex items-start gap-3 rounded-md border border-border bg-paper px-3.5 py-3 text-left text-sm transition-colors hover:border-brand hover:bg-brand-surface disabled:cursor-not-allowed disabled:opacity-50"
+                            className="group flex items-start gap-3 rounded-md border border-hairline bg-paper px-3.5 py-3 text-left text-sm transition-colors hover:border-brand hover:bg-brand-surface disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-deep" />
                             <span className="min-w-0 flex-1">
@@ -445,7 +449,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                             "flex gap-2.5 rounded-2xl border px-4 py-3.5",
                             turn.failed
                               ? "border-destructive/40 bg-destructive/5"
-                              : "border-border bg-paper-2",
+                              : "border-hairline bg-paper-2",
                           )}
                         >
                           {turn.failed ? null : <Marker kind="r" />}
@@ -469,7 +473,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                             ) : null}
                             {!turn.failed &&
                             turn.signals.correctiveRounds > 0 ? (
-                              <p className="mt-3 flex gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+                              <p className="mt-3 flex gap-2 border-t border-hairline pt-3 text-xs text-muted-foreground">
                                 <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-deep" />
                                 Le modèle a jugé le contexte insuffisant et a
                                 cherché lui-même (search, grep, read_page) avant
@@ -534,8 +538,8 @@ export function DemoChat({ children }: { children?: ReactNode }) {
             </ScrollArea>
 
             {/* saisie */}
-            <div className="border-t border-border p-3 px-5">
-              <div className="flex items-end gap-2 rounded-lg border border-input bg-white p-2 transition-colors focus-within:border-brand">
+            <div className="border-t border-hairline p-3 px-5">
+              <div className="flex items-end gap-2 rounded-sm border border-hairline-strong bg-paper p-2 transition-colors focus-within:border-brand">
                 <textarea
                     rows={1}
                   value={draft}
@@ -576,7 +580,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                       type="button"
                       onClick={reset}
                       disabled={pending}
-                      className="mono-xs inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-brand hover:text-brand-deep disabled:opacity-40"
+                      className="mono-xs inline-flex items-center gap-1 rounded-full border border-hairline px-2.5 py-1 text-muted-foreground transition-colors hover:border-brand hover:text-brand-deep disabled:opacity-40"
                     >
                       <RotateCcw className="size-3" /> Réinitialiser
                     </button>
@@ -587,7 +591,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                       type="button"
                       disabled={!ready || pending}
                       onClick={() => ask(s.text)}
-                      className="mono-xs cursor-pointer max-w-full truncate rounded-full border border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-brand hover:text-brand-deep disabled:opacity-40"
+                      className="mono-xs cursor-pointer max-w-full truncate rounded-full border border-hairline px-2.5 py-1 text-muted-foreground transition-colors hover:border-brand hover:text-brand-deep disabled:opacity-40"
                       title={s.text}
                     >
                       {s.text.slice(0, 48)}…

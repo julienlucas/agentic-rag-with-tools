@@ -40,7 +40,7 @@ function DocChip({
       }
       className={cn(
         "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors",
-        active ? "border-brand bg-brand-surface text-ink" : "border-border bg-paper text-ink-muted",
+        active ? "border-brand bg-brand-surface text-ink" : "border-hairline bg-paper text-ink-muted",
         clickable && "cursor-pointer hover:border-brand hover:text-ink",
       )}
     >
@@ -146,7 +146,7 @@ export function CorpusPanel({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 mt-4">
         <input
           ref={fileInput}
           type="file"

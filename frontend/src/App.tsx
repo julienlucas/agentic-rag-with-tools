@@ -4,6 +4,7 @@ import { ContactWidget } from "@/components/site/ContactWidget";
 import { Hero } from "@/components/sections/Hero";
 import { Agents } from "@/components/sections/Agents";
 import { Results } from "@/components/sections/Results";
+import { Tools } from "@/components/sections/Tools";
 import { Contact } from "@/components/sections/Contact";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <Hero />
         <Agents />
         <Results />
+        <Tools />
         <Contact />
       </main>
       <ContactWidget />

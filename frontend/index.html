@@ -19,9 +19,16 @@
     <link rel="icon" href="/static/mistral.png" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Fallbacks libres tant que Feature Display / Söhne (Klim) ne sont pas déposées dans /public/fonts -->
+    <meta name="theme-color" content="#f5f1ea" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0d0c" media="(prefers-color-scheme: dark)" />
+    <!--
+      Geist (display + corps), Geist Mono (étiquettes, chiffres) et Instrument Serif
+      (mots accentués en italique). `display=swap` fait émettre `font-display: swap`
+      dans chaque @font-face servi par Google ; les faces de repli metric-matched
+      déclarées dans styles.css évitent le décalage pendant le swap.
+    -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
       rel="stylesheet"
     />
   </head>

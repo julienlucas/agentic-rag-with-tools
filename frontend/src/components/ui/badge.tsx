@@ -3,20 +3,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/*
+ * Badges au même angle que les boutons (2px). La variante `mono` est l'étiquette
+ * technique du système : Geist Mono en capitales, filet, pas d'aplat — c'est elle
+ * qui porte les noms de modèles et d'outils.
+ */
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none",
+  "inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-xs font-medium leading-5 transition-colors focus:outline-none",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
+        default: "border-transparent bg-ink text-on-ink",
         brand: "border-transparent bg-brand-surface text-brand-deep",
-        sand: "border-transparent bg-paper-3 text-ink-muted",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        success: "border-transparent bg-success/12 text-success",
-        warning: "border-transparent bg-warning/18 text-brand-deep",
-        destructive: "border-transparent bg-destructive/12 text-destructive",
-        outline: "text-foreground",
-        mono: "mono-xs border-border bg-paper text-ink-muted",
+        sand: "border-transparent bg-paper-2 text-ink-muted",
+        secondary: "border-transparent bg-paper-2 text-ink-soft",
+        success: "border-transparent bg-success/10 text-success",
+        warning: "border-transparent bg-warning/12 text-warning",
+        destructive: "border-transparent bg-destructive/10 text-destructive",
+        outline: "border-hairline-strong text-ink",
+        mono: "mono-xs border-hairline bg-transparent px-2 py-1 uppercase tracking-[0.06em] text-ink-muted",
       },
     },
     defaultVariants: {

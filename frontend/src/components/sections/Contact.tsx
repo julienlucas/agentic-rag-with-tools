@@ -8,7 +8,7 @@ export function Contact() {
   return (
     <Section
       id="contact"
-      index="03"
+      tone="ink"
       eyebrow="Contact"
       title="Qui je suis ?"
       intro={
@@ -25,7 +25,7 @@ export function Contact() {
         <img
           src="/static/julienlucas.jpeg"
           alt="Julien Lucas"
-          className="size-28 rounded-full border border-border object-cover shadow-card"
+          className="size-28 rounded-full border border-hairline object-cover shadow-card"
         />
         <div>
           <span className="display-sm block">Julien Lucas</span>

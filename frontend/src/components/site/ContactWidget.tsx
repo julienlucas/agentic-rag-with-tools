@@ -25,7 +25,7 @@ export function ContactWidget() {
           <img
             src="/static/julienlucas.jpeg"
             alt="Julien Lucas"
-            className="size-10 rounded-full border border-border object-cover"
+            className="size-10 rounded-full border border-hairline object-cover"
           />
           <p className="display-sm mt-3">Call projet IA</p>
           <p className="mt-1 text-[0.8rem] leading-relaxed text-ink-muted">
@@ -40,7 +40,7 @@ export function ContactWidget() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="relative grid size-12 place-items-center rounded-full bg-ink text-on-ink shadow-lift transition-colors hover:bg-brand-ink"
+        className="relative grid size-12 place-items-center rounded-full border border-white/15 bg-ink text-on-ink shadow-lift transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_86%,var(--signal))]"
         aria-label="Contacter Julien"
         aria-expanded={open}
       >
@@ -50,7 +50,7 @@ export function ContactWidget() {
           style={{
             filter: "blur(6px)",
             background:
-              "conic-gradient(from 0deg, transparent 0deg, oklch(0.72 0.11 87.6 / 0.25) 120deg, oklch(0.8 0.1 88 / 0.95) 220deg, transparent 360deg)",
+              "conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--signal) 25%, transparent) 120deg, var(--signal) 220deg, transparent 360deg)",
             WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0)",
             mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0)",
           }}

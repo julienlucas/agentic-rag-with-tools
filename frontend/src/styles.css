@@ -4,91 +4,66 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system — "sand & signal"
- * Surfaces sable / crème / beige, encre espresso, un seul accent caramel-ocre.
- * Display : Feature Display (Klim). Corps : Söhne (Klim). Mono : Söhne Mono.
- * Fallbacks libres : Newsreader / Inter / JetBrains Mono (chargées via index.html).
- * Toutes les couleurs en oklch. Ne jamais coder une couleur en dur dans un composant.
+ * Design system — « Papier & Or »
+ *
+ * Surfaces papier chaud, encre quasi noire, un seul accent : l'or bruni, en nuances.
+ * Display + corps : Geist. Mono : Geist Mono. Accents italiques : Instrument Serif.
+ * Les trois familles sont servies par Google Fonts avec `display=swap` (cf. index.html),
+ * doublées ici par des faces de repli metric-matched (`font-display: swap`) pour que la
+ * bascule vers la webfont ne décale pas la mise en page.
+ *
+ * Règles :
+ *   — aucune couleur en dur dans un composant, tout passe par un token ;
+ *   — les contrôles (boutons, badges, tags) sont à angle quasi vif (--radius: 2px),
+ *     les surfaces média (cartes, panneaux) à 12px ;
+ *   — pas d'ombre portée pour séparer deux surfaces : un filet (hairline) suffit.
+ *     Les ombres ne servent qu'aux éléments qui flottent réellement (popover, widget).
  */
 
-/* ---------- Webfonts sous licence (déposer les fichiers dans /public/fonts) ---------- */
+/* ---------- Repli metric-matched : zéro décalage pendant le swap ---------- */
 
 @font-face {
-  font-family: "Feature Display";
-  src: local("Feature Display Light"), url("/fonts/feature-display-light.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
+  font-family: "Geist Fallback";
+  src: local("Helvetica Neue"), local("Arial");
   font-display: swap;
+  ascent-override: 95.94%;
+  descent-override: 28.16%;
+  line-gap-override: 0%;
+  size-adjust: 104.76%;
 }
 @font-face {
-  font-family: "Feature Display";
-  src: local("Feature Display Light Italic"), url("/fonts/feature-display-light-italic.woff2") format("woff2");
-  font-weight: 300;
-  font-style: italic;
+  font-family: "Geist Mono Fallback";
+  src: local("Menlo"), local("Arial");
   font-display: swap;
+  ascent-override: 74.67%;
+  descent-override: 21.92%;
+  line-gap-override: 0%;
+  size-adjust: 134.59%;
 }
 @font-face {
-  font-family: "Feature Display";
-  src: local("Feature Display Regular"), url("/fonts/feature-display-regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
+  font-family: "Instrument Serif Fallback";
+  src: local("Times New Roman"), local("Times");
   font-display: swap;
-}
-@font-face {
-  font-family: "Feature Display";
-  src: local("Feature Display Regular Italic"), url("/fonts/feature-display-regular-italic.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Söhne";
-  src: local("Söhne Buch"), local("Soehne Buch"), url("/fonts/soehne-buch.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Söhne";
-  src: local("Söhne Buch Kursiv"), url("/fonts/soehne-buch-kursiv.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Söhne";
-  src: local("Söhne Kräftig"), local("Soehne Kraftig"), url("/fonts/soehne-kraftig.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Söhne";
-  src: local("Söhne Halbfett"), local("Soehne Halbfett"), url("/fonts/soehne-halbfett.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Söhne Mono";
-  src: local("Söhne Mono Buch"), url("/fonts/soehne-mono-buch.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+  ascent-override: 117.94%;
+  descent-override: 36.93%;
+  line-gap-override: 0%;
+  size-adjust: 83.94%;
 }
 
 @theme inline {
-  --font-display: "Feature Display", "Newsreader", Georgia, "Times New Roman", serif;
-  --font-sans: "Söhne", "Inter", ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Söhne Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", "Instrument Serif Fallback", "Iowan Old Style", Georgia, serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /* Contrôles à angle vif, surfaces média adoucies. */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+  --radius-xl: var(--radius-media);
+  --radius-2xl: var(--radius-media);
+  --radius-3xl: 16px;
+  --radius-4xl: 20px;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -129,103 +104,162 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
   --color-on-ink: var(--on-ink);
   --color-on-ink-muted: var(--on-ink-muted);
+
+  --color-gold-100: var(--gold-100);
+  --color-gold-200: var(--gold-200);
+  --color-gold-300: var(--gold-300);
+  --color-gold-500: var(--gold-500);
+  --color-gold-700: var(--gold-700);
+  --color-gold-900: var(--gold-900);
 
   --color-chart-before: var(--chart-before);
   --color-chart-after: var(--chart-after);
   --color-chart-ref: var(--chart-ref);
 
-  --shadow-xs: 0 1px 2px oklch(0.25 0.03 60 / 5%);
-  --shadow-card: 0 1px 2px oklch(0.25 0.03 60 / 5%), 0 8px 24px oklch(0.25 0.03 60 / 7%);
-  --shadow-lift: 0 14px 36px oklch(0.25 0.03 60 / 10%), 0 4px 10px oklch(0.25 0.03 60 / 5%);
-  --shadow-brand: 0 10px 30px oklch(0.559 0.1 87.6 / 25%);
+  /* Une seule ombre réelle : celle des éléments qui flottent. Le reste est un filet. */
+  --shadow-xs: none;
+  --shadow-card: none;
+  --shadow-lift: 0 18px 44px -14px oklch(0.14 0.008 60 / 26%), 0 2px 6px oklch(0.14 0.008 60 / 8%);
+  --shadow-brand: none;
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 2px;
+  --radius-media: 12px;
 
-  /* Fond de page imposé : #f6f3ea = oklch(0.964 0.012 91.5). Toutes les surfaces gardent cette
-     teinte (91.5°), seule la luminosité descend et le chroma monte légèrement. */
-  --cream: #f6f3ea;
-  /* Fond de page à 80 % : la crème est composée sur la base blanche posée sur <html>
-     (rendu équivalent à #f8f5ee). Reste indexé sur --cream, qui garde sa valeur pleine
-     pour --primary-foreground et --destructive-foreground. */
-  --background: color-mix(in srgb, var(--cream) 10%, transparent);
-  --foreground: oklch(0.22 0.015 85);
-  --paper: oklch(0.99 0.006 91.5); /* #fdfcf7 */
-  --paper-2: oklch(0.952 0.014 91.5); /* #f2efe5 */
-  --paper-3: oklch(0.925 0.02 91.5); /* #ebe6d8 */
-  --paper-warm: oklch(0.94 0.03 91.5); /* #f2ebd5 */
-  --sand: oklch(0.865 0.038 91.5); /* #dcd2b7 */
-  --sand-deep: oklch(0.775 0.045 91.5); /* #c0b596 */
+  /* Rythme vertical et gouttière communs à toutes les sections. */
+  --section-y: clamp(4.5rem, 9vw, 8rem);
+  --gutter: clamp(1.25rem, 4vw, 2.5rem);
+
+  /* ---- Papiers ---- */
+  --paper: #f5f1ea;
+  --paper-2: #ede8df;
+  --paper-3: #e4ded2;
+  --paper-warm: var(--gold-100);
+  --sand: #ddd6ca;
+  --sand-deep: #c3bab0;
+
+  /* ---- Encre ---- */
+  --ink: #0e0d0c;
+  --ink-soft: #181614;
+  --ink-muted: #0e0d0ca3; /* 64 % — texte secondaire, AA sur papier */
+  --ink-faint: #0e0d0c94; /* 58 % — index, légendes, unités */
+  --hairline: #0e0d0c1f; /* 12 % — séparateur par défaut */
+  --hairline-strong: #0e0d0c47; /* 28 % — bordure de contrôle */
+
+  /* ---- L'or, en nuances ----
+     Une seule teinte, déclinée du lavis à l'encre dorée. `--signal` est le rôle
+     (l'accent), `--gold-*` est la matière : on manipule le rôle, jamais la valeur. */
+  --gold-100: #f2ebd5; /* lavis — fonds de section, wash */
+  --gold-200: #e3d5a8; /* champagne — panneaux, série basse d'un graphe */
+  --gold-300: #c2a04c; /* or clair — accent posé sur l'encre */
+  --gold-500: #8d7022; /* or bruni — l'accent, aplats et barres */
+  --gold-600: #705300; /* hover d'un aplat */
+  --gold-700: #624900; /* texte accent sur papier — 7,6:1 */
+  --gold-900: #2f2a17; /* encre dorée — série haute d'un graphe */
+
+  --signal: var(--gold-500);
+  --signal-strong: var(--gold-600);
+  --signal-deep: var(--gold-700);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
 
   --card: var(--paper);
   --card-foreground: var(--foreground);
   --popover: var(--paper);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.3 0.06 87.6);
-  --primary-foreground: var(--cream);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
   --secondary: var(--paper-2);
-  --secondary-foreground: oklch(0.26 0.015 85);
+  --secondary-foreground: var(--ink-soft);
   --muted: var(--paper-2);
-  --muted-foreground: oklch(0.5 0.025 88);
-  --accent: var(--paper-warm);
-  --accent-foreground: oklch(0.42 0.09 87.6);
-  --destructive: oklch(0.55 0.17 32);
-  --destructive-foreground: var(--cream);
-  --success: oklch(0.56 0.1 150);
-  --warning: oklch(0.72 0.14 80);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--gold-100);
+  --accent-foreground: var(--signal-deep);
+  --destructive: #9b1c30;
+  --destructive-foreground: var(--paper);
+  --success: #1f6b4f;
+  --warning: #8a5a00;
 
-  --border: oklch(0.9 0.018 91.5); /* #e2ded1 */
-  --input: oklch(0.88 0.02 91.5); /* #dcd7c9 */
-  --ring: oklch(0.559 0.1 87.6);
+  --border: var(--hairline);
+  --input: var(--hairline-strong);
+  --ring: var(--signal);
 
-  /* Accent imposé : #8d7022 = oklch(0.559 0.100 87.6) — or bruni. */
-  --brand: oklch(0.559 0.1 87.6); /* #8d7022 */
-  --brand-strong: oklch(0.46 0.1 87.6); /* #705300 · hover */
-  --brand-deep: oklch(0.42 0.09 87.6); /* #624900 · texte accent sur crème */
-  --brand-ink: oklch(0.3 0.06 87.6); /* #3a2b01 */
-  --brand-light: oklch(0.72 0.11 87.6); /* #c2a04c · accent sur fond encre */
-  --brand-surface: oklch(0.559 0.1 87.6 / 12%);
-  --brand-surface-strong: oklch(0.559 0.1 87.6 / 10%);
+  --brand: var(--signal);
+  --brand-strong: var(--signal-strong);
+  --brand-deep: var(--signal-deep);
+  --brand-ink: var(--ink); /* aplat sombre des boutons primaires */
+  --brand-light: var(--gold-300); /* accent posé sur l'encre */
+  --brand-surface: color-mix(in srgb, var(--signal) 12%, transparent);
+  /* Teinte de panneau : le champagne posé sur le papier, pas une opacité d'or. */
+  --brand-surface-strong: color-mix(in srgb, var(--gold-200) 45%, var(--paper));
 
-  --ink: oklch(0.22 0.015 85);
-  --ink-soft: oklch(0.27 0.015 85);
-  --ink-muted: oklch(0.42 0.02 86);
-  --on-ink: oklch(0.96 0.01 91.5);
-  --on-ink-muted: oklch(0.96 0.01 91.5 / 66%);
+  --on-ink: var(--paper);
+  --on-ink-muted: #f5f1eaa8;
 
-  /* paire avant/après validée dataviz sur #f6f3ea : #c2a04c / #8d7022 */
-  --chart-before: oklch(0.72 0.11 87.6);
-  --chart-after: oklch(0.559 0.1 87.6);
-  /* série de référence externe (Mistral) — validée dataviz : #1d6f9c */
-  --chart-ref: oklch(0.535 0.113 240);
+  /* Avant / après / référence externe : une seule teinte, trois valeurs —
+     champagne, or bruni, encre dorée. Distinguables aussi en niveaux de gris. */
+  --chart-before: var(--gold-200);
+  --chart-after: var(--gold-500);
+  --chart-ref: var(--gold-900);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 0.18s;
+  --dur-base: 0.32s;
 }
 
 .dark {
-  --background: oklch(0.2 0.018 58);
-  --foreground: oklch(0.96 0.016 86);
-  --paper: oklch(0.24 0.018 58);
-  --paper-2: oklch(0.28 0.02 58);
-  --paper-3: oklch(0.32 0.022 58);
-  --paper-warm: oklch(0.3 0.03 65);
-  --card: oklch(0.24 0.018 58);
-  --card-foreground: oklch(0.96 0.016 86);
-  --popover: oklch(0.24 0.018 58);
-  --popover-foreground: oklch(0.96 0.016 86);
-  --primary: oklch(0.72 0.11 87.6);
-  --primary-foreground: oklch(0.2 0.018 58);
-  --secondary: oklch(0.32 0.022 58);
-  --secondary-foreground: oklch(0.96 0.016 86);
-  --muted: oklch(0.32 0.022 58);
-  --muted-foreground: oklch(0.72 0.02 75);
-  --accent: oklch(0.36 0.04 60);
-  --accent-foreground: oklch(0.85 0.09 75);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --on-ink: oklch(0.96 0.016 86);
+  --paper: #181614;
+  --paper-2: #211e1b;
+  --paper-3: #2b2724;
+  --paper-warm: #2b2415;
+  --sand: #3a352f;
+  --sand-deep: #4b453d;
+
+  --ink: #f2ede6;
+  --ink-soft: #e2dcd3;
+  --ink-muted: #f2ede6a3;
+  --ink-faint: #f2ede694;
+  --hairline: #f2ede61f;
+  --hairline-strong: #f2ede647;
+
+  --background: #0e0d0c;
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+
+  --primary: var(--signal);
+  --primary-foreground: #0e0d0c;
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-2);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--gold-100);
+  --accent-foreground: var(--gold-300);
+  --destructive: #e8697d;
+  --success: #5fbf9a;
+  --warning: var(--gold-300);
+
+  --brand-deep: var(--gold-300);
+  --brand-ink: var(--signal);
+  --brand-surface: color-mix(in srgb, var(--signal) 20%, transparent);
+  --brand-surface-strong: color-mix(in srgb, var(--signal) 12%, var(--paper));
+
+  --on-ink: #f2ede6;
+  --on-ink-muted: #f2ede6a8;
+
+  --chart-before: #6b5a30;
+  --chart-after: var(--gold-300);
+  --chart-ref: #e6dcc0;
 }
 
 @layer base {
@@ -235,109 +269,198 @@
 
   html {
     scroll-behavior: smooth;
-    /* Base opaque sous le fond translucide du body. Sans elle, le composite du 80 %
-       dépend du canvas du navigateur. */
-    background-color: #fff;
+    background-color: var(--color-background);
   }
 
   body {
     background-color: var(--color-background);
-    /* Dès que <html> a un fond, celui du body ne se propage plus au canvas : sans cette
-       hauteur, une page courte laisserait apparaître le blanc sous le contenu. */
     min-height: 100dvh;
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    font-feature-settings: "cv11", "ss01";
     overflow-x: hidden;
   }
 
+  /* Geist a de vrais chiffres tabulaires : on les impose partout où un nombre
+     est susceptible de changer sous les yeux (compteurs, timers, pourcentages). */
+  :is(td, th, time, output, .tabular-nums) {
+    font-variant-numeric: tabular-nums;
+  }
+
   ::selection {
-    background: var(--brand-surface-strong);
+    background: var(--gold-200);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
   /* Liens inline dans le texte (hors boutons et navigation, qui portent une classe) */
   a:not([class]) {
     color: var(--ink);
-    font-weight: 600;
+    font-weight: 500;
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-decoration-color: var(--hairline-strong);
+    text-underline-offset: 3px;
     text-decoration-thickness: 1px;
-    transition: color 0.15s ease;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      text-decoration-color var(--dur-fast) var(--ease-out);
   }
 
   a:not([class]):hover {
     color: var(--brand-deep);
+    text-decoration-color: currentColor;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 /* ---------- Utilitaires typographiques ---------- */
 
+/* Geist en display : graisse moyenne, chasse resserrée, interlignage court. */
 @utility display-xl {
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(2.9rem, 5.6vw, 5rem);
-  line-height: 1;
-  letter-spacing: -0.028em;
+  font-weight: 500;
+  font-size: clamp(2.75rem, 1.9rem + 4.2vw, 5.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
 }
 
 @utility display-lg {
   font-family: var(--font-display);
-  font-weight: 300;
-  font-size: clamp(2.1rem, 3.9vw, 3.4rem);
-  line-height: 1.06;
-  letter-spacing: -0.022em;
+  font-weight: 500;
+  font-size: clamp(2.125rem, 1.3rem + 3.1vw, 3.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 @utility display-md {
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
-  line-height: 1.14;
-  letter-spacing: -0.018em;
+  font-weight: 500;
+  font-size: clamp(1.625rem, 1.35rem + 1.35vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 
 @utility display-sm {
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 1.3rem;
-  line-height: 1.2;
-  letter-spacing: -0.012em;
+  font-weight: 500;
+  font-size: clamp(1.125rem, 1.05rem + 0.35vw, 1.375rem);
+  line-height: 1.25;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
 }
 
-/* Italique caramel à l'intérieur des titres display */
+/* Le mot accentué à l'intérieur d'un titre : Instrument Serif italique, orange profond.
+   Légèrement agrandi et remonté pour compenser l'œil plus petit du serif. */
 @utility accent-italic {
+  font-family: var(--font-serif);
   font-style: italic;
+  font-weight: 400;
+  font-size: 1.08em;
+  letter-spacing: -0.012em;
+  line-height: 0.9;
   color: var(--brand-deep);
 }
 
 @utility eyebrow {
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.1em;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--brand-deep);
+  line-height: 1.4;
+  color: var(--ink-faint);
 }
 
 @utility copy {
-  max-width: 62ch;
-  line-height: 1.62;
+  max-width: 64ch;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  letter-spacing: -0.006em;
+  text-wrap: pretty;
   color: var(--ink-muted);
 }
 
 @utility mono-xs {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.02em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Étiquette technique : mono, capitales, filet. Sert aux noms de modèles et d'outils. */
+@utility tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 0.2rem 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  color: var(--ink-muted);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+/* Lien de navigation : le soulignement se déploie depuis la gauche. */
+@utility nav-link {
+  position: relative;
+  color: var(--ink-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  &:hover {
+    color: var(--ink);
+  }
+  &:hover::after {
+    transform: scaleX(1);
+  }
 }
 
 /* ---------- Surfaces ---------- */
 
 @utility card-paper {
   background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-media);
 }
 
 @utility grain {
@@ -347,7 +470,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.045;
+    opacity: 0.05;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   }
 }
@@ -382,7 +505,7 @@
 }
 
 @utility rise-in {
-  animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in var(--dur-base) var(--ease-out) both;
 }
 
 @keyframes halo-spin {
@@ -398,9 +521,11 @@
 /* ---------- Prose (réponses markdown du RAG) ---------- */
 
 @utility prose-rag {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.65;
+  letter-spacing: -0.005em;
   color: var(--ink-soft);
+  text-wrap: pretty;
   & > :first-child {
     margin-top: 0;
   }
@@ -412,10 +537,10 @@
   & h3,
   & h4 {
     font-family: var(--font-display);
-    font-weight: 400;
-    letter-spacing: -0.01em;
+    font-weight: 500;
+    letter-spacing: -0.02em;
     color: var(--ink);
-    margin-top: 1rem;
+    margin-top: 1.1rem;
     margin-bottom: 0.35rem;
     line-height: 1.2;
   }
@@ -423,18 +548,18 @@
     font-size: 1.25rem;
   }
   & h2 {
-    font-size: 1.15rem;
+    font-size: 1.125rem;
   }
   & h3,
   & h4 {
-    font-size: 1.05rem;
+    font-size: 1rem;
   }
   & p {
-    margin: 0.45rem 0;
+    margin: 0.5rem 0;
   }
   & ul,
   & ol {
-    margin: 0.45rem 0 0.45rem 1.1rem;
+    margin: 0.5rem 0 0.5rem 1.1rem;
     display: grid;
     gap: 0.25rem;
   }
@@ -450,59 +575,98 @@
   }
   & code {
     font-family: var(--font-mono);
-    font-size: 0.78em;
-    background: var(--paper-3);
-    padding: 0.1em 0.35em;
-    border-radius: 4px;
+    font-size: 0.85em;
+    background: var(--paper-2);
+    border: 1px solid var(--hairline);
+    padding: 0.08em 0.32em;
+    border-radius: var(--radius);
   }
   & hr {
     border: 0;
-    border-top: 1px solid var(--border);
-    margin: 0.85rem 0;
+    border-top: 1px solid var(--hairline);
+    margin: 0.9rem 0;
   }
   & table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     margin: 0.6rem 0;
+    font-variant-numeric: tabular-nums;
   }
   & th,
   & td {
-    border: 1px solid var(--border);
-    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--hairline);
+    padding: 0.4rem 0.55rem;
     text-align: left;
     vertical-align: top;
   }
   & th {
     background: var(--paper-2);
     font-weight: 500;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
   }
 }
 
-/* Leviers du benchmark : fond de marque qui s'estompe du premier rang au dernier. */
+/* ---------- Surface d'encre ----------
+   Le pendant sombre du papier, sur le modèle du footer de nuances.builders :
+   fond d'encre, texte crème, filets à 14 % de crème. On ne redéfinit que les rôles —
+   `--hairline`, `--ink-muted`, `--brand-deep`… — si bien que tout enfant écrit avec les
+   tokens du système bascule sans une seule classe conditionnelle. */
+.surface-ink {
+  /* `--ink` n'est PAS redéfini : c'est la valeur de palette dont `bg-ink` tire le fond
+     de cette surface — la remapper ici peindrait la section crème sur crème. On ne
+     touche qu'aux rôles de texte et de filet. */
+  --foreground: var(--on-ink);
+  --ink-soft: var(--on-ink);
+  --ink-muted: var(--on-ink-muted);
+  --ink-faint: color-mix(in srgb, var(--on-ink) 52%, transparent);
+  --hairline: color-mix(in srgb, var(--on-ink) 14%, transparent);
+  --hairline-strong: color-mix(in srgb, var(--on-ink) 32%, transparent);
+  --border: var(--hairline);
+  --input: var(--hairline-strong);
+  --muted-foreground: var(--on-ink-muted);
+  --brand-deep: var(--gold-300); /* l'or bruni ne tient pas sur l'encre : on éclaircit */
+  --brand-surface: color-mix(in srgb, var(--gold-300) 16%, transparent);
+  color: var(--on-ink);
+}
+.surface-ink a:not([class]) {
+  color: var(--on-ink);
+  text-decoration-color: color-mix(in srgb, var(--on-ink) 40%, transparent);
+}
+.surface-ink a:not([class]):hover {
+  color: var(--gold-300);
+  text-decoration-color: currentColor;
+}
+.surface-ink ::selection {
+  background: var(--gold-300);
+  color: var(--ink-soft);
+}
+
+/* Leviers du benchmark, triés par gain : le champagne s'estompe du premier rang au
+   dernier. On dégrade une teinte claire vers le papier — et non l'encre vers le papier —
+   pour que le texte reste en encre sur toute la série, sans zone grise illisible au milieu.
+   Seul le premier rang est marqué, par un filet d'or en bord gauche. */
 .lever-row {
-  --lever-base: var(--brand-ink);
-  --lever-fg-strong: oklch(0.97 0.012 90);
-  background: color-mix(in oklch, var(--lever-base) var(--lever-strength), var(--paper));
+  background: color-mix(in oklch, var(--gold-300) var(--lever-strength), var(--paper));
   color: var(--foreground);
+  border-left: 2px solid transparent;
 }
 .lever-row .lever-index {
-  color: var(--sand-deep);
+  color: var(--signal-deep);
 }
 .lever-row .lever-text {
   color: var(--ink-muted);
 }
 .lever-row[data-strong] {
-  color: var(--lever-fg-strong);
-}
-.lever-row[data-strong] .lever-index,
-.lever-row[data-strong] .lever-text {
-  color: color-mix(in oklch, var(--lever-fg-strong) 78%, transparent);
+  border-left-color: var(--signal);
 }
 .dark .lever-row {
-  --lever-base: var(--brand);
+  background: color-mix(in oklch, var(--gold-900) var(--lever-strength), var(--paper));
 }
-.dark .lever-row .lever-index,
-.dark .lever-row .lever-text {
-  color: color-mix(in oklch, var(--foreground) 72%, transparent);
+.dark .lever-row .lever-index {
+  color: var(--gold-300);
 }

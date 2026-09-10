@@ -13,7 +13,7 @@ export function Container({
   return (
     <div
       className={cn(
-        "mx-auto w-full px-5 sm:px-8",
+        "mx-auto w-full px-[var(--gutter)]",
         width === "narrow" && "max-w-3xl",
         width === "default" && "max-w-6xl",
         width === "wide" && "max-w-7xl",
@@ -25,20 +25,15 @@ export function Container({
   );
 }
 
+/**
+ * Surtitre : Geist Mono en capitales espacées, sans pastille ni aplat — le contraste
+ * de casse et de chasse suffit à le détacher du titre qui suit.
+ */
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <span
-      className={cn(
-        "eyebrow inline-flex items-center gap-2 rounded-full border border-sand/70 bg-brand-surface px-3 py-1",
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
+  return <span className={cn("eyebrow", className)}>{children}</span>;
 }
 
-/** Section numérotée, mise en page éditoriale : grand index, eyebrow, titre display. */
+/** Section numérotée, mise en page éditoriale : index en rail, surtitre mono, titre display. */
 export function Section({
   index,
   eyebrow,
@@ -58,48 +53,43 @@ export function Section({
   tone?: "paper" | "muted" | "ink";
   id?: string;
 }) {
+  const onInk = tone === "ink";
   return (
     <section
       id={id}
       className={cn(
-        "scroll-mt-16 border-t border-border/50 py-20 sm:py-28",
+        "scroll-mt-16 border-t border-hairline py-[var(--section-y)]",
         tone === "muted" && "bg-paper-2",
-        tone === "ink" && "grain bg-ink text-on-ink border-white/10",
+        onInk && "surface-ink grain bg-ink",
         className,
       )}
     >
       <Container>
-        <div className="grid gap-10 lg:grid-cols-[5rem_1fr]">
+        <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[6rem_1fr]">
+          {/* Rail de gauche : le numéro de section, aligné sur la première ligne du titre. */}
           <div className="hidden lg:block">
             {index ? (
-              <div
-                className={cn(
-                  "font-display text-5xl font-light leading-none",
-                  tone === "ink" ? "text-on-ink-muted" : "text-sand-deep",
-                )}
-              >
-                {index}
-                <div className={cn("mt-3 h-px w-10", tone === "ink" ? "bg-brand-light" : "bg-brand")} />
+              <div className="sticky top-8">
+                <span className="mono-xs block tracking-[0.08em] text-ink-faint">
+                  ({index})
+                </span>
+                <span
+                  aria-hidden
+                  className={cn("mt-3 block h-px w-8", onInk ? "bg-gold-300" : "bg-brand")}
+                />
               </div>
             ) : null}
           </div>
+
           <div className="min-w-0">
             {eyebrow ? (
-              <Eyebrow className={tone === "ink" ? "border-white/15 bg-white/5 text-brand-light" : undefined}>
-                {eyebrow}
-              </Eyebrow>
+              <Eyebrow>{eyebrow}</Eyebrow>
             ) : null}
             {title ? (
-              <h2 className={cn("display-lg mt-5 max-w-3xl", tone === "ink" && "text-on-ink")}>
-                {title}
-              </h2>
+              <h2 className="display-lg mt-4 max-w-3xl">{title}</h2>
             ) : null}
             {intro ? (
-              <div
-                className={cn("copy mt-5 text-[1.0625rem]", tone === "ink" && "text-on-ink-muted")}
-              >
-                {intro}
-              </div>
+              <div className="copy mt-5">{intro}</div>
             ) : null}
             {children ? <div className="mt-12">{children}</div> : null}
           </div>
@@ -108,4 +98,3 @@ export function Section({
     </section>
   );
 }
-

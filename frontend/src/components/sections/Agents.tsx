@@ -41,12 +41,12 @@ export function Agents() {
     >
       <div className="grid gap-4 md:grid-cols-3">
         {agents.map((a) => (
-          <div key={a.title} className="card-paper border-border/50 flex h-full flex-col p-6">
+          <div key={a.title} className="card-paper border-hairline flex h-full flex-col p-6">
             <div className="flex items-center justify-between">
               <span className="inline-flex size-9 items-center justify-center rounded-md bg-brand-surface text-brand-deep [&_svg]:size-4.5">
                 {a.icon}
               </span>
-              <span className="mono-xs text-sand-deep">{a.index}</span>
+              <span className="mono-xs text-ink-faint">{a.index}</span>
             </div>
             <h3 className="display-sm mt-4">{a.title}</h3>
             <Badge variant="mono" className="mt-2 w-fit">
