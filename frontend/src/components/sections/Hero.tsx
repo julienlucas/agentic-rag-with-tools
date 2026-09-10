@@ -63,13 +63,13 @@ export function Hero() {
             <h1 className="display-xl mt-4">
               RAG <span className="accent-italic">agentique</span>
               <span className="display-md mt-2 block text-ink">
-                Du RAG naïf au RAG agentique évalué stricte
+                Discutez avec quantité de documents, avec un haut taux de réponses correctes et citations des sources
               </span>
             </h1>
             <p className="copy mt-6">
-              RAG agentique à outils inspiré de Mistral AI. Automatisation de
+              RAG agentique à outils de navigation dans les documents et évaluation stricte du RAG <a href="https://mistral.ai/news/agentic-search/" target="_blank">inspiré de Mistral AI</a>. Automatisation de
               réponses exigeant précision dans un corpus large de documents —
-              documents techniques, rapports denses en tableaux, spécifications,
+              base de connaissance interne en entreprise, rapports denses en tableaux, spécifications,
               appels d'offres.
             </p>
           </div>
