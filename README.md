@@ -1,5 +1,5 @@
 # RAG Agentique multi-agent évalué sur FinanceBench
-![RAG Agentique multi-agent Header](./static/header-b.png)
+![RAG Agentique multi-agent Header](./static/header.webp)
 
 Si vous appréciez, ajoutez une ⭐ au repo pour soutenir mon travail. 🙏
 
