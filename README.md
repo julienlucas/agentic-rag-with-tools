@@ -1,5 +1,5 @@
 # RAG Agentique évalué ~83 % de réponses correctes sur un sous-ensemble de FinanceBench
-![RAG Agentique multi-agent Header](./static/header.webp)
+![RAG Agentique multi-agent Header](./static/header-a.png)
 
 Si vous appréciez, ajoutez une ⭐ au repo pour soutenir mon travail. 🙏
 
