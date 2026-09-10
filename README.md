@@ -1,4 +1,4 @@
-# RAG Agentique multi-agent avec outils de navigation dans documents indexés — évalué sur FinanceBench
+# RAG Agentique évalué ~83 % de réponses correctes sur un sous-ensemble de FinanceBench
 ![RAG Agentique multi-agent Header](./static/header.webp)
 
 Si vous appréciez, ajoutez une ⭐ au repo pour soutenir mon travail. 🙏

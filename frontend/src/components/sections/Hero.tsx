@@ -63,14 +63,19 @@ export function Hero() {
             <h1 className="display-xl mt-4">
               RAG <span className="accent-italic">agentique</span>
               <span className="display-md mt-2 block text-ink">
-                Discutez avec quantité de documents, avec un haut taux de réponses correctes et citations des sources
+                Discutez avec quantité de documents, avec citation des sources — évalué ~83 % de réponses correctes
+                sur un sous-ensemble de FinanceBench
               </span>
             </h1>
             <p className="copy mt-6">
-              RAG agentique à outils de navigation dans les documents et évaluation stricte du RAG <a href="https://mistral.ai/news/agentic-search/" target="_blank">inspiré de Mistral AI</a>. Automatisation de
-              réponses exigeant précision dans un corpus large de documents —
-              base de connaissance interne en entreprise, rapports denses en tableaux, spécifications,
-              appels d'offres.
+              RAG agentique à outils de navigation dans les documents et
+              évaluation stricte du RAG{" "}
+              <a href="https://mistral.ai/news/agentic-search/" target="_blank">
+                inspiré de Mistral AI
+              </a>
+              . Automatisation de réponses exigeant précision dans un corpus
+              large de documents — base de connaissance interne en entreprise,
+              rapports denses en tableaux, spécifications, appels d'offres.
             </p>
           </div>
 
