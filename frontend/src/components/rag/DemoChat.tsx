@@ -122,7 +122,7 @@ function Marker({ kind }: { kind: "q" | "r" }) {
     <span
       aria-hidden
       className={cn(
-        "mt-[0.09rem] grid size-5 shrink-0 place-items-center rounded font-mono text-[0.7rem] font-semibold",
+        "-mt-0.5 grid size-6 shrink-0 place-items-center rounded font-mono text-base font-semibold",
         kind === "q"
           ? "text-brand-deep"
           : "text-success",
