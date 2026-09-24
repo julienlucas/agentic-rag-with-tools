@@ -14,11 +14,13 @@ from .config import constants
 from .config.settings import settings
 from .utils.logging import logger
 
-# Configuration LangSmith pour le tracking (si besoin)
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
-os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
-os.environ["LANGCHAIN_PROJECT"] = "agentic_rag_multi_agent"
+# Configuration LangSmith pour le tracking, seulement si une clé est fournie : sans clé,
+# os.environ[...] = None faisait planter l'import du module (la clé est optionnelle).
+if settings.LANGSMITH_API_KEY:
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+    os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
+    os.environ["LANGCHAIN_PROJECT"] = "agentic_rag_multi_agent"
 
 # Stockage des sessions (en production, utiliser Redis ou base de données)
 sessions = {}
@@ -95,6 +97,9 @@ def upload_file(request):
     file = request.FILES.get('file')
     session_id = request.POST.get('session_id', 'default')
 
+    if file is None:
+        return JsonResponse({"error": "Aucun fichier reçu (champ 'file')."}, status=400)
+
     try:
         # Valider le fichier
         if not file.name.lower().endswith(tuple(constants.ALLOWED_TYPES)):
@@ -122,10 +127,14 @@ def load_file(request):
     file_name = data.get('file_name', '').strip()
     session_id = data.get('session_id', 'default')
 
-    try:
-        # Chemin vers le fichier sur le disque dur
-        file_path = os.path.join(settings.EXAMPLES_DIR, file_name)
+    # Le nom vient du client : sans ce contrôle, « ../README.md » (ou tout .md/.txt/.pdf du
+    # serveur) était OCRisé et devenait interrogeable par n'importe quel visiteur.
+    examples_dir = os.path.realpath(settings.EXAMPLES_DIR)
+    file_path = os.path.realpath(os.path.join(examples_dir, file_name))
+    if not file_name or file_path == examples_dir or os.path.commonpath([examples_dir, file_path]) != examples_dir:
+        return JsonResponse({"error": f"Fichier d'exemple inconnu: {file_name}"}, status=400)
 
+    try:
         # Créer un objet fichier pour le processeur
         class FileObject:
             def __init__(self, path):

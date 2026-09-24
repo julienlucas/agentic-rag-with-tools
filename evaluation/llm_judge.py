@@ -153,14 +153,18 @@ class FinanceBenchJudge:
                 return "REFUSAL"
         return None
 
+    # « **VERDICT:** CORRECT » ou « VERDICT**: CORRECT » : sans cette tolérance, un juge qui
+    # met ses champs en gras voyait tous ses CORRECT comptés INCORRECT (valeur par défaut).
+    _FIELD = r"{}\**\s*:[\s*\[]*"
+
     def _parse(self, response: str) -> FinanceBenchVerdict:
         verdict = "INCORRECT"
-        m = re.search(r"VERDICT:\s*\[?\s*(CORRECT|INCORRECT|REFUSAL)", response, re.IGNORECASE)
+        m = re.search(self._FIELD.format("VERDICT") + r"(CORRECT|INCORRECT|REFUSAL)", response, re.IGNORECASE)
         if m:
             verdict = m.group(1).upper()
 
         faithfulness = 3.0
-        m = re.search(r"FAITHFULNESS:\s*\[?\s*(\d(?:\.\d)?)", response, re.IGNORECASE)
+        m = re.search(self._FIELD.format("FAITHFULNESS") + r"(\d(?:\.\d)?)", response, re.IGNORECASE)
         if m:
             try:
                 faithfulness = max(1.0, min(5.0, float(m.group(1))))
@@ -168,7 +172,7 @@ class FinanceBenchJudge:
                 pass
 
         reason = "Impossible de parser la réponse du juge"
-        m = re.search(r"RAISON:\s*(.+?)(?:\n\s*\n|$)", response, re.IGNORECASE | re.DOTALL)
+        m = re.search(self._FIELD.format("RAISON") + r"(.+?)(?:\n\s*\n|$)", response, re.IGNORECASE | re.DOTALL)
         if m:
             reason = " ".join(m.group(1).split())
 

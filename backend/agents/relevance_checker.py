@@ -1,3 +1,6 @@
+import re
+from typing import Optional
+
 from langchain_mistralai import ChatMistralAI
 from ..config.settings import settings
 import logging
@@ -74,13 +77,26 @@ class RelevanceChecker:
             logger.error(f"Structure de réponse inattendue: {e}")
             return "NO_MATCH"
 
-        # Valider la réponse
-        valid_labels = {"CAN_ANSWER", "PARTIAL", "NO_MATCH"}
-        if llm_response not in valid_labels:
-            logger.debug("Le LLM n'a pas répondu avec un label valide. Forçage de 'NO_MATCH'.")
-            classification = "NO_MATCH"
-        else:
-            logger.debug(f"Classification reconnue comme '{llm_response}'.")
-            classification = llm_response
-
+        classification = parse_relevance_label(llm_response)
+        if classification is None:
+            logger.warning(f"Label de pertinence illisible ({llm_response[:80]!r}). Forçage de 'NO_MATCH'.")
+            return "NO_MATCH"
+        logger.debug(f"Classification reconnue comme '{classification}'.")
         return classification
+
+
+_LABEL_RE = re.compile(r"(?<![A-Z_])(CAN[ _-]ANSWER|PARTIAL|NO[ _-]MATCH)(?![A-Z_])")
+
+
+def parse_relevance_label(text: str) -> Optional[str]:
+    """
+    Extrait le label de la réponse du modèle, ou None s'il n'y en a pas.
+
+    Une égalité stricte classait en NO_MATCH, sans bruit, des réponses pourtant claires :
+    « CAN_ANSWER. », « **PARTIAL** », « Label: CAN_ANSWER ». Sans outils, NO_MATCH mène
+    au refus. On prend le premier label cité, quelle que soit sa mise en forme.
+    """
+    m = _LABEL_RE.search((text or "").upper())
+    if not m:
+        return None
+    return re.sub(r"[ -]", "_", m.group(1))
