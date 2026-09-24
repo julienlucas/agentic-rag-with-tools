@@ -354,7 +354,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                         <div className="mb-2 flex flex-wrap items-center gap-2">
                           <span className="mono-xs text-muted-foreground">
                             confiance reranker{" "}
-                            {EXAMPLE_SIGNALS.rerankScore?.toFixed(2)}
+                            {EXAMPLE_SIGNALS.rerankScore != null ? `${Math.round(EXAMPLE_SIGNALS.rerankScore * 100)}\u00a0%` : null}
                           </span>
                           <span className="mono-xs inline-flex items-center gap-1 text-muted-foreground">
                             <Clock className="size-3" /> {exampleOutput.elapsed}
@@ -437,7 +437,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                           {turn.signals.rerankScore != null ? (
                             <span className="mono-xs text-muted-foreground">
                               confiance reranker{" "}
-                              {turn.signals.rerankScore.toFixed(2)}
+                              {Math.round(turn.signals.rerankScore * 100)}&nbsp;%
                             </span>
                           ) : null}
                           <span className="mono-xs inline-flex items-center gap-1 text-muted-foreground">
