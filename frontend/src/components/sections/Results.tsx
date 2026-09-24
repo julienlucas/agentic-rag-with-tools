@@ -25,7 +25,7 @@ const levels = [
   {
     label: "Ce RAG agentique",
     setup:
-      "OCR Mistral · chunking parent / enfant · hybride BM25 + vecteurs · routage · reranking Cohere · vérificateur de pertinence · agent de recherche à outils (search / grep / read_page) · génération contrainte aux preuves",
+      "Modèle de raisonnement : Mistral Large (mistral-large-latest, La Plateforme), Mistral Small pour les sous-agents · OCR Mistral · chunking parent / enfant · hybride BM25 + vecteurs · routage · reranking Cohere · vérificateur de pertinence · agent de recherche à outils (search / grep / read_page) · génération contrainte aux preuves",
     correct: "83,3 %",
     wrong: "20 bonnes réponses sur 24 questions jugées",
     tone: "brand" as const,

@@ -67,16 +67,18 @@ const limits = [
     text: "Sur 8 questions sur 26, la page de preuve n'atteint jamais le modèle, outils compris. Quand elle l'atteint, il répond juste dans 15 cas sur 18.",
   },
   {
-    title: "Le modèle de raisonnement sur les questions est faible",
+    title: "Le modèle de raisonnement est limité",
     text: (
       <>
-        Un autre modèle de raisonnement que{" "}
+        Ce RAG agentique répond avec{" "}
         <img
           src="/static/mistral.png"
           alt="Mistral AI"
           className="inline-block h-4 w-auto align-text-bottom"
         />{" "}
-        Ce qui est utilisé utilisé dans ce RAG agentique est Mistral Medium 3, un modèle de raisonnement limité. Pourtant un gros gain se joue ici.
+        Mistral Large (mistral-large-latest), et Mistral Small pour les sous-agents : un modèle de
+        raisonnement limité. Un modèle plus fort est un gros levier : le port TypeScript de ce projet,
+        sur Claude Sonnet 4.6, passe de 83 % à 92 % sur les mêmes 26 questions.
       </>
     ),
   }
