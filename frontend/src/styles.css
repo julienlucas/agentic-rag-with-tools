@@ -118,6 +118,7 @@
   --color-gold-900: var(--gold-900);
 
   --color-chart-before: var(--chart-before);
+  --color-chart-notools: var(--chart-notools);
   --color-chart-after: var(--chart-after);
   --color-chart-ref: var(--chart-ref);
 
@@ -207,6 +208,7 @@
   /* Avant / après / référence externe : une seule teinte, trois valeurs —
      champagne, or bruni, encre dorée. Distinguables aussi en niveaux de gris. */
   --chart-before: var(--gold-200);
+  --chart-notools: var(--gold-300);
   --chart-after: var(--gold-500);
   --chart-ref: var(--gold-900);
 

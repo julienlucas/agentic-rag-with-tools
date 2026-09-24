@@ -23,7 +23,15 @@ const levels = [
     tone: "muted" as const,
   },
   {
-    label: "Ce RAG agentique",
+    label: "Ce RAG, sans outils",
+    setup:
+      "Même index, même retrieval, mêmes 10 passages initiaux, même modèle (Mistral Large) : une seule génération, sans search / grep / read_page. C'est le témoin qui mesure ce que les outils apportent.",
+    correct: "65,4 %",
+    wrong: "17 bonnes réponses sur 26 questions",
+    tone: "plain" as const,
+  },
+  {
+    label: "Ce RAG, avec outils",
     setup:
       "Modèle de raisonnement : Mistral Large (mistral-large-latest, La Plateforme), Mistral Small pour les sous-agents · OCR Mistral · chunking parent / enfant · hybride BM25 + vecteurs · routage · reranking Cohere · vérificateur de pertinence · agent de recherche à outils (search / grep / read_page) · génération contrainte aux preuves",
     correct: "83,3 %",
@@ -33,7 +41,7 @@ const levels = [
   {
     label: "Agentic Search · Mistral",
     setup:
-      "Mistral Medium 3.5, boucle agentique + navigation · 150 questions sur les 368 documents (53900 pages) du benchmark complet + un benchmark de 89000 pages (OfficeQA Pro) qui sont des documents scannés",
+      "Modèle de raisonnement : Mistral Medium 3.5 · 26,7 % en RAG one-shot sans boucle agentique, 86 % avec · boucle agentique + navigation · 150 questions sur les 368 documents (53900 pages) du benchmark complet + un benchmark de 89000 pages (OfficeQA Pro) qui sont des documents scannés",
     correct: "86 %",
     wrong: "évalué sur 150 questions sur FinanceBench",
     tone: "ref" as const,
@@ -43,6 +51,7 @@ const levels = [
 type Row = {
   metric: string;
   before: number;
+  noTools: number;
   after: number;
   mistral: number;
   hint: string;
@@ -53,6 +62,7 @@ const rows: Row[] = [
   {
     metric: "Correctes",
     before: 19,
+    noTools: 65.4,
     after: 83.3,
     mistral: 86,
     hint: "accuracy · verdict CORRECT du juge LLM · 20 sur 24 jugées (2 erreurs techniques exclues)",
@@ -60,9 +70,10 @@ const rows: Row[] = [
   {
     metric: "Fausses ou refusées",
     before: 81,
+    noTools: 34.6,
     after: 16.7,
     mistral: 14,
-    hint: "16,7 % d'hallucinations + 0 % de refus · plus bas = mieux",
+    hint: "avec outils : 16,7 % d'hallucinations + 0 % de refus · 34,6 % sans outils (26,9 % d'hallucinations + 7,7 % de refus) · plus bas = mieux",
     lowerIsBetter: true,
   },
 ];
@@ -126,6 +137,24 @@ const metricGroups: { title: string; rows: MetricRow[] }[] = [
   {
     title: "Réponse",
     rows: [
+      {
+        metric: "Correctes",
+        baseline: "65,4 % (17)",
+        agentic: "83,3 % (20)",
+        hint: "verdict CORRECT du juge LLM · avec outils : 20 sur 24 jugées (2 erreurs techniques exclues)",
+      },
+      {
+        metric: "Hallucinations",
+        baseline: "26,9 % (7)",
+        agentic: "16,7 % (4)",
+        hint: "réponse affirmée mais fausse",
+      },
+      {
+        metric: "Refus",
+        baseline: "7,7 % (2)",
+        agentic: "aucun",
+        hint: "",
+      },
       {
         metric: "Faithfulness",
         baseline: "4,73 / 5",
@@ -207,7 +236,7 @@ function MetricsTable() {
   );
 }
 
-function Bar({ value, tone, label }: { value: number; tone: "before" | "after" | "mistral"; label: string }) {
+function Bar({ value, tone, label }: { value: number; tone: "before" | "notools" | "after" | "mistral"; label: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -216,6 +245,7 @@ function Bar({ value, tone, label }: { value: number; tone: "before" | "after" |
             className={cn(
               "h-2.5 rounded-r-[4px] transition-[width] duration-700",
               tone === "before" && "bg-chart-before",
+              tone === "notools" && "bg-chart-notools",
               tone === "after" && "bg-chart-after",
               tone === "mistral" && "bg-chart-ref",
             )}
@@ -232,7 +262,7 @@ function Bar({ value, tone, label }: { value: number; tone: "before" | "after" |
 }
 
 function Delta({ row }: { row: Row }) {
-  const d = row.after - row.before;
+  const d = row.after - row.noTools;
   const good = row.lowerIsBetter ? d < 0 : d > 0;
   return (
     <span className={cn("tabular-nums", d === 0 ? "text-muted-foreground" : good ? "text-brand-deep" : "text-destructive")}>
@@ -268,8 +298,9 @@ function BenchmarkChart() {
             <tr className="text-left text-xs text-muted-foreground">
               <th className="py-2 font-medium">Métrique</th>
               <th className="py-2 font-medium">RAG naïf</th>
-              <th className="py-2 font-medium">RAG agentique</th>
-              <th className="py-2 font-medium">Δ</th>
+              <th className="py-2 font-medium">Sans outils</th>
+              <th className="py-2 font-medium">Avec outils</th>
+              <th className="py-2 font-medium">Δ outils</th>
               <th className="py-2 font-medium">Mistral Agentic Search</th>
             </tr>
           </thead>
@@ -279,6 +310,9 @@ function BenchmarkChart() {
                 <td className="py-2 font-medium">{r.metric}</td>
                 <td className="py-2 tabular-nums">
                   {r.before.toLocaleString("fr-FR")} %
+                </td>
+                <td className="py-2 tabular-nums">
+                  {r.noTools.toLocaleString("fr-FR")} %
                 </td>
                 <td className="py-2 tabular-nums">
                   {r.after.toLocaleString("fr-FR")} %
@@ -295,12 +329,15 @@ function BenchmarkChart() {
         </table>
       ) : (
         <>
-          <div className="mt-4 flex items-center gap-4">
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="flex items-center gap-1.5 text-xs text-ink-muted">
               <span className="size-2.5 rounded-sm bg-chart-before" /> RAG naïf
             </span>
             <span className="flex items-center gap-1.5 text-xs text-ink-muted">
-              <span className="size-2.5 rounded-sm bg-chart-after" /> RAG agentique
+              <span className="size-2.5 rounded-sm bg-chart-notools" /> Ce RAG sans outils
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+              <span className="size-2.5 rounded-sm bg-chart-after" /> Ce RAG avec outils
             </span>
             <span className="flex items-center gap-1.5 text-xs text-ink-muted">
               <span className="size-2.5 rounded-sm bg-chart-ref" /> Mistral
@@ -327,12 +364,17 @@ function BenchmarkChart() {
                   <Bar
                     value={r.before}
                     tone="before"
-                    label={`${r.metric} · avant`}
+                    label={`${r.metric} · RAG naïf`}
+                  />
+                  <Bar
+                    value={r.noTools}
+                    tone="notools"
+                    label={`${r.metric} · ce RAG sans outils`}
                   />
                   <Bar
                     value={r.after}
                     tone="after"
-                    label={`${r.metric} · après`}
+                    label={`${r.metric} · ce RAG avec outils`}
                   />
                   <Bar
                     value={r.mistral}
@@ -365,13 +407,14 @@ export function Results() {
       intro="FinanceBench est le benchmark que Mistral utilise pour évaluer leur outil Agentic Search : des questions financières sur des filings SEC denses en tableaux, où chaque chiffre apparaît des dizaines de fois. L'évaluation de mon RAG agentique porte ici sur 26 questions et 4 rapports (AMD, American Express, Boeing, PepsiCo, des documents de 150 à 260 pages)."
     >
       {/* trois niveaux */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {levels.map((l, i) => (
           <div
             key={l.label}
             className={cn(
               "flex h-full flex-col rounded-xl border p-8",
               l.tone === "muted" && "border-hairline bg-chart-after/5",
+              l.tone === "plain" && "border-hairline bg-paper-2",
               l.tone === "brand" && "bg-chart-after/20 shadow-xl",
               l.tone === "ref" && "border-hairline bg-chart-ref/5",
             )}
@@ -380,7 +423,7 @@ export function Results() {
               <span className="eyebrow">{l.label}</span>
               <span className="mono-xs text-ink-faint">0{i + 1}</span>
             </div>
-            <div className="font-display mt-4 text-5xl font-normal tracking-tight">
+            <div className="font-display mt-4 text-5xl font-normal tracking-tight whitespace-nowrap">
               {l.correct}
             </div>
             <div className="mt-1 text-sm font-medium">réponses correctes</div>
@@ -416,7 +459,8 @@ export function Results() {
             <span className="accent-italic">
               à ~19 % sur le benchmark complet
             </span>
-            . Mistral Agentic Search annonce 86 % sur{" "}
+            . Sans outils, le même système n'en répond que 17 sur 26 : les outils font gagner 18 points. Mistral Agentic Search (Mistral Medium 3.5)
+            annonce 86 % sur{" "}
             <strong className="font-semibold text-ink">150 questions</strong> et
             368 documents — soit un périmètre bien plus large, qui n&apos;est
             pas comparable directement.

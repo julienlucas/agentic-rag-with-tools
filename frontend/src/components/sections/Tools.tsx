@@ -126,7 +126,7 @@ export function Tools() {
       <div className="card-paper border-hairline mt-10 p-8">
         <p className="display-sm mt-8">Voici les gains avec des outils</p>
         <p className="mono-xs mt-1 text-muted-foreground">
-          Mistral · sur FinanceBench, 150 questions, 368 documents, soit 53900
+          Mistral Agentic Search, modèle Mistral Medium 3.5 · sur FinanceBench, 150 questions, 368 documents, soit 53900
           pages indéxées ensemble
         </p>
         <div className="mt-6 grid gap-6 sm:grid-cols-3">
