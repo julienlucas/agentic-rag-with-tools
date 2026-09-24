@@ -221,3 +221,6 @@ evaluation/financebench/chroma/
 
 # Build du frontend : reconstruit par le Dockerfile et par Vercel
 frontend/dist/
+
+# Garde-fous de régression FinanceBench : derniers runs locaux
+evaluation/financebench/regression/last_run/

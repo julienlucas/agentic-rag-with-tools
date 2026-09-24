@@ -1,6 +1,6 @@
 import math
 
-from evaluation.metrics import _f1_score, _mrr_at_k, _ndcg_at_k, _recall_at_k
+from evaluation.metrics import _f1_score, _mrr_at_k, _ndcg_at_k, _precision_at_k, _recall_at_k
 
 
 def test_recall_at_k():
@@ -8,6 +8,13 @@ def test_recall_at_k():
     assert _recall_at_k([1, 1, 0], 3) == 1.0
     assert _recall_at_k([0, 0, 0], 3) == 0.0
     assert _recall_at_k([], 3) is None
+
+
+def test_precision_at_k():
+    assert _precision_at_k([1, 0, 1, 0], 2) == 0.5
+    assert _precision_at_k([1, 1, 0, 0], 4) == 0.5
+    assert _precision_at_k([1], 5) == 0.2  # moins de k passages : le dénominateur reste k
+    assert _precision_at_k([], 3) is None
 
 
 def test_mrr_at_k():

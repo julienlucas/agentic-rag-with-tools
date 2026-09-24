@@ -49,6 +49,25 @@ facile (un index par document).
 Les runs antérieurs au 4 septembre 2026 (après-midi) portaient sur les 3 premiers documents,
 21 questions : leurs chiffres ne sont pas comparables à ceux d'un run à 26.
 
+### Jeu étendu (70 questions)
+
+À 26 questions, l'IC95 de l'accuracy fait ~35 points de large : un écart de 5 points entre deux
+versions n'y est pas mesurable. `--docs extended` prend tous les documents qui portent au moins
+3 questions : **18 documents, 70 questions**. Il s'écrit dans `dataset_extended.jsonl`, jamais
+dans `dataset.jsonl` (le protocole publié), et le runner refuse d'en écrire les résultats dans
+`outputs/` :
+
+```bash
+uv run python evaluation/financebench/prepare.py --docs extended
+uv run python evaluation/financebench/run_financebench_eval.py --mode both \
+    --dataset evaluation/financebench/dataset_extended.jsonl \
+    --out-dir evaluation/financebench/outputs_dataset_extended
+```
+
+La préparation OCRise 14 documents de plus. Coût estimé, pas mesuré : de l'ordre de 2 000 pages,
+soit ~8 $ d'OCR à la grille de `cost.py`. Un run complet coûte environ 70/26 fois celui du
+protocole à 26 questions.
+
 ## Prérequis
 
 Un fichier `.env` à la racine du projet :
@@ -146,6 +165,29 @@ Les refus sont détectés **sans appel LLM** quand le pipeline renvoie un de ses
 Les erreurs techniques (timeout, LLM indisponible) sont comptées à part et exclues du
 dénominateur, pour ne pas les confondre avec des refus.
 
+### Faithfulness et answer relevancy
+
+- **`mean_faithfulness`** (1-5) — note donnée par le juge dans le même appel que le verdict : la
+  réponse s'en tient-elle aux extraits fournis ? Ce n'est pas la faithfulness de RAGAS
+  (vérification affirmation par affirmation), mais un signal global.
+- **`mean_answer_relevancy`** (0-1) — la réponse traite-t-elle la question posée ? Méthode RAGAS
+  (`evaluation/answer_relevancy.py`) : Mistral Small écrit 3 questions auxquelles la réponse
+  répond, et on prend la similarité cosinus moyenne (Mistral Embed) avec la question d'origine.
+  Un refus ou une réponse évasive vaut 0. Elle ne regarde pas la référence : une réponse fausse
+  mais centrée sur la question score haut ; c'est le verdict du juge qui dit si elle est juste.
+  Coût : un appel Mistral Small par réponse. `--no-answer-relevancy` la désactive.
+
+Sur les réponses sauvegardées du run du 4 septembre (calcul a posteriori, même code) :
+
+| | Faithfulness /5 | Answer relevancy | … sur les CORRECT | … sur les INCORRECT | … sur les refus |
+|---|---|---|---|---|---|
+| Baseline | 4,73 | 0,710 (26) | 0,840 (17) | 0,596 (7) | 0,0 (2) |
+| Agentic | 4,79 | 0,805 (24) | 0,798 (20) | 0,842 (4) | — |
+
+L'écart de relevancy entre les modes vient surtout des refus, qui valent 0 : l'agentic n'en a
+pas. Les 4 hallucinations de l'agentic restent centrées sur la question (0,84) : elles se
+trompent de chiffre, elles ne répondent pas à côté.
+
 ### Retrieval exact, grâce aux pages annotées
 
 FinanceBench annote la **page** de chaque preuve (zero-indexed). L'ingestion conserve le numéro de
@@ -173,8 +215,15 @@ S'y ajoutent, par mode :
 
 ### Métriques de retrieval
 
-`recall@k`, `mrr@k`, `ndcg@k` (matching textuel sur les passages de preuve), `context_hit_rate`
-et `mean_f1` viennent de `evaluation/metrics.py`.
+`recall@k`, `precision@k`, `mrr@k`, `ndcg@k` (matching textuel sur les passages de preuve),
+`context_hit_rate` et `mean_f1` viennent de `evaluation/metrics.py`. `page_precision@k` est la
+part des k premiers passages qui viennent d'une page de preuve.
+
+⚠️ **La précision est plafonnée par construction.** Une question n'a souvent qu'une ou deux pages
+de preuve : même un retrieval parfait ne met pas 10 passages pertinents dans un top-10. Elle se
+lit d'un run à l'autre (le contexte contient-il moins de bruit ?), pas en valeur absolue. Run du
+4 septembre, recalculé depuis les pages sauvegardées : `page_precision@5` 14,6 %,
+`@10` 13,1 %, `@20` 8,7 % (identique dans les deux modes : même retrieval initial).
 
 ⚠️ **`mean_f1` est peu informatif ici** : les réponses attendues sont en prose
 (« Data Center », « Performance is not measured through operating margin »), le recouvrement de
@@ -227,6 +276,43 @@ appels Rerank seulement (192 réussis avant).
 Ne sont pas comptés les embeddings de requête pendant le run (quelques dizaines de tokens par
 recherche, négligeables) et la préparation, payée une fois : l'OCR des 1 074 pages et l'embedding
 des ~12 400 chunks, soit 4,4 $ ≈ 3,8 € (OCR à 4 $ les 1 000 pages, ~900 k tokens embeddés à 0,10 $/M) à la même grille.
+
+## Garde-fous de régression
+
+L'éval complète mesure le système ; elle ne dit pas *ce qui* a cassé et coûte trop pour tourner
+à chaque changement. `regression.py` fournit deux contrôles ciblés, à lancer **à la main** avant
+de merger un changement de prompt, de chunking, de retrieval ou de modèle. Ils ne tournent pas en
+CI : ils appellent les vraies API. La CI, elle, fait tourner les tests pytest, tous hors ligne.
+
+```bash
+# Retrieval seul, question par question contre une baseline versionnée (quelques centimes)
+uv run python evaluation/financebench/regression.py retrieval
+
+# ~10 questions sentinelles, de bout en bout avec le juge (~0,10 €)
+uv run python evaluation/financebench/regression.py sentinels
+```
+
+**`retrieval`** rejoue le retrieval des 26 questions et compare le rang de la page de preuve à
+`regression/retrieval_baseline.json`. Il échoue si une question perd sa preuve du top-10 (ce
+que le modèle voit sans outils) ou si `page_hit@10` baisse de plus de 5 points. La comparaison
+est faite question par question, parce qu'une perte compensée par un gain laisse la moyenne
+inchangée. Après un changement voulu qui améliore le retrieval :
+`regression.py retrieval --update-baseline`.
+
+**`sentinels`** rejoue en mode agentic les questions de `regression/sentinels.json`, réussies au
+run du 4 septembre, et vérifie le verdict du juge **et** la trajectoire : la page de preuve
+a-t-elle été montrée au modèle ? Chaque sentinelle dit ce qu'elle protège (calcul de ratio,
+preuve hors du top-10 atteinte seulement par les outils, réponse directe…). Un échec est
+toléré par défaut (`--max-failures 1`) : le modèle à température 0 n'est pas strictement
+déterministe ; relancer la question en échec départage.
+
+Codes de sortie : `0` passe, `1` régression, `2` **run invalide**. Quand Cohere échoue (quota,
+clé), le reranker rend l'ordre du retriever hybride sans lever d'erreur : le retrieval baisse et
+ressemblerait à une régression du code. Les deux garde-fous le détectent et refusent de conclure.
+
+La baseline actuelle est reprise du run versionné du 4 septembre, dont les derniers appels
+Rerank avaient atteint le plafond Cohere : elle est à régénérer par un run live dès que la clé
+fonctionne.
 
 ## Notes d'implémentation
 

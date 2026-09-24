@@ -1,4 +1,4 @@
-# Métriques d'évaluation partagées : retrieval (recall@k, MRR, nDCG) et réponse (F1,
+# Métriques d'évaluation partagées : retrieval (recall@k, precision@k, MRR, nDCG) et réponse (F1,
 # context_hit). Extraites de l'ancien harness `evaluation/run_eval.py` (supprimé avec le
 # jeu interne) pour que l'évaluation FinanceBench garde exactement le même calcul.
 
@@ -96,6 +96,20 @@ def _recall_at_k(flags: List[int], k: int) -> Optional[float]:
     if total_relevant == 0:
         return 0.0
     return min(sum(flags[:k]) / total_relevant, 1.0)
+
+
+def _precision_at_k(flags: List[int], k: int) -> Optional[float]:
+    """
+    Part des k premiers passages qui sont pertinents (dénominateur k, convention standard :
+    renvoyer moins de k passages ne gonfle pas la précision).
+
+    Sur FinanceBench, une question n'a souvent qu'une ou deux preuves : precision@10 est
+    plafonnée bien en dessous de 1 par construction. Elle se lit en évolution d'un run à
+    l'autre (moins de bruit dans le contexte), pas en valeur absolue.
+    """
+    if not flags or k <= 0:
+        return None
+    return sum(flags[:k]) / k
 
 
 def _mrr_at_k(flags: List[int], k: int) -> Optional[float]:

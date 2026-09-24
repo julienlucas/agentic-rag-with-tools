@@ -1,8 +1,10 @@
 # Évaluation du RAG agentique sur FinanceBench (Patronus AI).
 #
-# Protocole FinanceBench : accuracy / refusal_rate / hallucination_rate, jugés par LLM.
-# Métriques retrieval exactes grâce aux pages annotées (page_hit@k, page_recall@k),
-# plus les métriques historiques du projet (recall/mrr/ndcg, F1, context_hit).
+# Protocole FinanceBench : accuracy / refusal_rate / hallucination_rate, jugés par LLM,
+# plus la faithfulness (note du juge) et l'answer relevancy (méthode RAGAS).
+# Métriques retrieval exactes grâce aux pages annotées (page_hit@k, page_recall@k,
+# page_precision@k), plus les métriques historiques du projet (recall/precision/mrr/ndcg,
+# F1, context_hit).
 #
 # Prérequis: uv run python evaluation/financebench/prepare.py
 #
@@ -33,6 +35,7 @@ from backend.config.settings import settings
 from backend.agents.workflow import AgentState, AgentWorkflow, effective_top_k
 from backend.retriever.page_store import PageStore
 from evaluation.financebench.prepare import load_cached_chunks, load_cached_pages, store_dir_for
+from evaluation.answer_relevancy import AnswerRelevancy
 from evaluation.llm_judge import FinanceBenchJudge, aggregate_financebench_verdicts
 from evaluation.financebench.cost import compute_cost, format_cost
 from evaluation.metrics import (
@@ -41,6 +44,7 @@ from evaluation.metrics import (
     _f1_score,
     _mrr_at_k,
     _ndcg_at_k,
+    _precision_at_k,
     _recall_at_k,
 )
 from evaluation.utils import (
@@ -118,6 +122,35 @@ def _page_recall_at_k(docs, gold_pages: List, k: int, tolerance: int = 1) -> Opt
     return len(covered) / len(gold)
 
 
+def compute_retrieval_metrics(docs, example: Dict, k_values: List[int], page_tolerance: int) -> Dict:
+    """
+    Métriques de retrieval d'une question, partagées par les modes — et par le garde-fou de
+    régression (regression.py), qui doit mesurer exactement la même chose que l'éval.
+    """
+    gold_passages = example.get("gold_passages", [])
+    gold_pages = example.get("gold_pages", [])
+    text_flags = _doc_relevance_flags(docs, gold_passages)
+    page_flags = _page_flags(docs, gold_pages, page_tolerance)
+    metrics = {"n_docs": len(docs)}
+    for k in k_values:
+        metrics[f"recall@{k}"] = _recall_at_k(text_flags, k)
+        metrics[f"precision@{k}"] = _precision_at_k(text_flags, k)
+        metrics[f"mrr@{k}"] = _mrr_at_k(text_flags, k)
+        metrics[f"ndcg@{k}"] = _ndcg_at_k(text_flags, k)
+        metrics[f"page_hit@{k}"] = _page_hit_at_k(page_flags, k)
+        metrics[f"page_recall@{k}"] = _page_recall_at_k(docs, gold_pages, k, page_tolerance)
+        metrics[f"page_precision@{k}"] = _precision_at_k(page_flags, k)
+
+    # Traçabilité : les 20 (document, page) récupérés + rang de la première page de preuve.
+    metrics["retrieved"] = [
+        [str((d.metadata or {}).get("doc_name") or (d.metadata or {}).get("source") or ""),
+         (d.metadata or {}).get("page")]
+        for d in docs[:20]
+    ]
+    metrics["gold_rank"] = next((i for i, f in enumerate(page_flags, start=1) if f), None)
+    return metrics
+
+
 # ---------------------------------------------------------------------------
 # Évaluation d'une question
 # ---------------------------------------------------------------------------
@@ -132,37 +165,17 @@ def evaluate_example(
     k_values: List[int],
     page_tolerance: int,
     page_store: Optional[PageStore] = None,
+    relevancy: Optional[AnswerRelevancy] = None,
 ) -> List[Dict]:
     """Récupère une seule fois, puis génère une réponse par mode évalué."""
     question = example["question"].strip()
     expected = example.get("expected_answer", "").strip()
-    gold_passages = example.get("gold_passages", [])
     gold_pages = example.get("gold_pages", [])
 
     t0 = time.time()
     docs = retriever.invoke(question)
-    retrieval_sec = time.time() - t0
-
-    # Métriques de retrieval : une seule fois, partagées par les modes.
-    text_flags = _doc_relevance_flags(docs, gold_passages)
-    page_flags = _page_flags(docs, gold_pages, page_tolerance)
-    retrieval_metrics = {"retrieval_sec": round(retrieval_sec, 2), "n_docs": len(docs)}
-    for k in k_values:
-        retrieval_metrics[f"recall@{k}"] = _recall_at_k(text_flags, k)
-        retrieval_metrics[f"mrr@{k}"] = _mrr_at_k(text_flags, k)
-        retrieval_metrics[f"ndcg@{k}"] = _ndcg_at_k(text_flags, k)
-        retrieval_metrics[f"page_hit@{k}"] = _page_hit_at_k(page_flags, k)
-        retrieval_metrics[f"page_recall@{k}"] = _page_recall_at_k(docs, gold_pages, k, page_tolerance)
-
-    # Traçabilité : les 20 (document, page) récupérés + rang de la première page de preuve.
-    retrieval_metrics["retrieved"] = [
-        [str((d.metadata or {}).get("doc_name") or (d.metadata or {}).get("source") or ""),
-         (d.metadata or {}).get("page")]
-        for d in docs[:20]
-    ]
-    retrieval_metrics["gold_rank"] = next(
-        (i for i, f in enumerate(page_flags, start=1) if f), None
-    )
+    retrieval_metrics = compute_retrieval_metrics(docs, example, k_values, page_tolerance)
+    retrieval_metrics["retrieval_sec"] = round(time.time() - t0, 2)
 
     # Documents transmis au LLM (même top-k que workflow._research_step).
     top_k = settings.RESEARCH_TOP_K
@@ -268,6 +281,15 @@ def evaluate_example(
                 row["verdict"] = "ERROR"
                 row["judge_reason"] = f"juge indisponible: {root_cause(e)}"
 
+        if relevancy:
+            try:
+                row["answer_relevancy"] = call_with_backoff(
+                    lambda: relevancy.score(question, answer),
+                    f"l'answer relevancy ({example.get('id')})", log=_log,
+                )
+            except Exception:
+                row["answer_relevancy"] = None  # mesure manquante, la réponse reste valide
+
         rows.append(row)
 
     return rows
@@ -300,6 +322,10 @@ def aggregate(results: List[Dict], k_values: List[int]) -> Dict:
     seen = [r["evidence_seen"] for r in results if r.get("evidence_seen") is not None]
     if seen:
         base["evidence_seen_rate"] = round(sum(seen) / len(seen), 4)
+    relevancy = [r["answer_relevancy"] for r in results if r.get("answer_relevancy") is not None]
+    if relevancy:
+        base["mean_answer_relevancy"] = round(mean(relevancy), 4)
+        base["answer_relevancy_count"] = len(relevancy)
     corrective = [r.get("corrective_rounds") for r in results if r.get("corrective_rounds") is not None]
     if corrective:
         base["corrective_rate"] = round(sum(1 for c in corrective if c > 0) / len(corrective), 4)
@@ -312,7 +338,8 @@ def aggregate(results: List[Dict], k_values: List[int]) -> Dict:
 
     retrieval = {}
     for k in k_values:
-        for metric in (f"recall@{k}", f"mrr@{k}", f"ndcg@{k}", f"page_hit@{k}", f"page_recall@{k}"):
+        for metric in (f"recall@{k}", f"precision@{k}", f"mrr@{k}", f"ndcg@{k}",
+                       f"page_hit@{k}", f"page_recall@{k}", f"page_precision@{k}"):
             values = [r.get(metric) for r in results if r.get(metric) is not None]
             if values:
                 retrieval[metric] = round(mean(values), 4)
@@ -420,6 +447,7 @@ def print_report(summary: Dict, modes: List[str], k_values: List[int] = None, n_
         row("  questions", lambda b: _count(b, "refusal"))
         row("Faithfulness moyenne /5", lambda b: str(fb(b).get("mean_faithfulness") or "—"))
         lines.append("-" * 78)
+    row("Answer relevancy (0-1)", lambda b: str(b.get("mean_answer_relevancy") or "—"))
     row("Preuve transmise au LLM", lambda b: _pct(b.get("evidence_seen_rate")))
     row("Recherche corrective déclenchée", lambda b: _pct(b.get("corrective_rate")))
     row("  appels d'outils (moy., si corrigée)", lambda b: str(b.get("mean_tool_calls_when_corrected", "—")))
@@ -428,7 +456,9 @@ def print_report(summary: Dict, modes: List[str], k_values: List[int] = None, n_
     row(f"page_hit@{k_small} (retrieval exact)", lambda b: _pct((b.get("retrieval") or {}).get(f"page_hit@{k_small}")))
     row(f"page_hit@{k_large}", lambda b: _pct((b.get("retrieval") or {}).get(f"page_hit@{k_large}")))
     row(f"page_recall@{k_large}", lambda b: _pct((b.get("retrieval") or {}).get(f"page_recall@{k_large}")))
+    row(f"page_precision@{k_small}", lambda b: _pct((b.get("retrieval") or {}).get(f"page_precision@{k_small}")))
     row(f"recall@{k_large} (texte)", lambda b: _pct((b.get("retrieval") or {}).get(f"recall@{k_large}")))
+    row(f"precision@{k_small} (texte)", lambda b: _pct((b.get("retrieval") or {}).get(f"precision@{k_small}")))
     row("context_hit_rate", lambda b: _pct(b.get("context_hit_rate")))
     row("mean_f1", lambda b: _pct(b.get("mean_f1")))
     lines.append("-" * 78)
@@ -505,7 +535,9 @@ def main():
     parser.add_argument("--k-values", default="5,10,20")
     parser.add_argument("--workers", type=int, default=2,
                         help="Questions en parallèle. Passer à 1 en cas de rate limits répétés.")
-    parser.add_argument("--no-judge", action="store_true", help="Désactive le juge LLM")
+    parser.add_argument("--no-judge", action="store_true", help="Désactive le juge LLM (et l'answer relevancy)")
+    parser.add_argument("--no-answer-relevancy", action="store_true",
+                        help="Désactive l'answer relevancy (1 appel Mistral Small + embeddings par réponse)")
     parser.add_argument("--time-budget", type=int, default=600,
                         help="Arrêt propre au-delà de N secondes, avec résultats partiels")
     parser.add_argument("--page-tolerance", type=int, default=1,
@@ -524,6 +556,8 @@ def main():
         partial.append("--no-judge")
     if args.docs:
         partial.append(f"--docs {args.docs}")
+    if os.path.abspath(args.dataset) != os.path.abspath(HERE / "dataset.jsonl"):
+        partial.append(f"--dataset {os.path.basename(args.dataset)}")  # autre protocole que celui publié
     guard_partial_overwrite(args.out_dir, str(HERE / "outputs"), partial, args.force_overwrite)
 
     dataset = load_dataset(args.dataset)
@@ -541,7 +575,8 @@ def main():
     modes = ["baseline", "agentic"] if args.mode == "both" else [args.mode]
 
     _log(f"{len(dataset)} questions sur {len(docs_in_dataset)} documents: {', '.join(docs_in_dataset)}")
-    _log(f"Modes: {', '.join(modes)} | workers: {args.workers} | juge: {not args.no_judge}")
+    _log(f"Modes: {', '.join(modes)} | workers: {args.workers} | juge: {not args.no_judge} | "
+         f"answer relevancy: {not (args.no_judge or args.no_answer_relevancy)}")
 
     start = time.time()
 
@@ -576,6 +611,7 @@ def main():
     workflow = AgentWorkflow() if "agentic" in modes else None
     researcher = ResearchAgent() if "baseline" in modes else None
     judge = None if args.no_judge else FinanceBenchJudge()
+    relevancy = None if (args.no_judge or args.no_answer_relevancy) else AnswerRelevancy()
 
     # Le pipeline imprime énormément de DEBUG : illisible avec plusieurs workers.
     if not args.verbose:
@@ -596,7 +632,7 @@ def main():
                 pool.submit(
                     contextvars.copy_context().run,
                     evaluate_example, ex, get_retriever(ex), modes,
-                    workflow, researcher, judge, k_values, args.page_tolerance, page_store,
+                    workflow, researcher, judge, k_values, args.page_tolerance, page_store, relevancy,
                 ): ex
                 for ex in dataset
             }

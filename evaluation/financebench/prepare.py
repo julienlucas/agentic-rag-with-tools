@@ -44,6 +44,31 @@ DEFAULT_DOCS = [
     "PEPSICO_2022_10K",
 ]
 
+# Jeu étendu : tous les documents portant au moins 3 questions (18 documents, 70 questions).
+# À 26 questions, l'IC95 de l'accuracy fait ~35 points de large : un écart de 5 points entre
+# deux versions n'y est pas mesurable. À 70, la largeur tombe vers ~20 points.
+EXTENDED_MIN_QUESTIONS = 3
+
+
+def extended_docs(questions: List[Dict], min_questions: int = EXTENDED_MIN_QUESTIONS) -> List[str]:
+    """Documents du jeu étendu, triés : ceux qui portent au moins `min_questions` questions."""
+    counts: Dict[str, int] = {}
+    for q in questions:
+        counts[q["doc_name"]] = counts.get(q["doc_name"], 0) + 1
+    return sorted(d for d, n in counts.items() if n >= min_questions)
+
+
+def dataset_path_for(docs: List[str], preset: str = "") -> Path:
+    """
+    Le dataset versionné (dataset.jsonl) porte les 26 questions du protocole publié. Tout
+    autre jeu de documents écrit ailleurs : avant, `--docs AMD_2022_10K` le réécrivait avec
+    7 questions, et le run suivant n'était plus comparable aux chiffres du README.
+    """
+    if sorted(docs) == sorted(DEFAULT_DOCS):
+        return HERE / "dataset.jsonl"
+    return HERE / ("dataset_extended.jsonl" if preset == "extended" else "dataset_custom.jsonl")
+
+
 # Longueur cible des snippets gold découpés depuis evidence_text.
 # Les evidence FinanceBench vont de 180 à 2400 caractères : un parent chunk (1200 car.)
 # ne peut pas contenir 60% des tokens d'une evidence de 2400 car., donc _doc_relevance_flags
@@ -445,7 +470,8 @@ def build_vector_store(chunks: List, docs: List[str], force: bool = False):
 def main():
     parser = argparse.ArgumentParser(description="Prépare l'évaluation FinanceBench")
     parser.add_argument("--docs", default=",".join(DEFAULT_DOCS),
-                        help="Documents à ingérer, séparés par des virgules")
+                        help="Documents à ingérer, séparés par des virgules, ou 'extended' "
+                             f"(tous les documents à {EXTENDED_MIN_QUESTIONS}+ questions : 18 documents, 70 questions)")
     parser.add_argument("--force", action="store_true", help="Ignore les caches et tout reconstruit")
     parser.add_argument("--skip-embeddings", action="store_true",
                         help="N'construit pas la collection Chroma (elle sera bâtie au 1er run)")
@@ -455,18 +481,20 @@ def main():
                         help="Pause en secondes entre deux lots OCR")
     args = parser.parse_args()
 
-    docs = [d.strip() for d in args.docs.split(",") if d.strip()]
     PDF_DIR.mkdir(parents=True, exist_ok=True)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-    _log(f"Documents: {', '.join(docs)}")
     questions = load_questions(args.force)
     _log(f"{len(questions)} questions FinanceBench chargées")
+
+    preset = args.docs.strip() if args.docs.strip() == "extended" else ""
+    docs = extended_docs(questions) if preset else [d.strip() for d in args.docs.split(",") if d.strip()]
+    _log(f"Documents: {', '.join(docs)}")
 
     rows = build_dataset(questions, docs)
     if not rows:
         raise SystemExit(f"Aucune question trouvée pour: {docs}")
-    write_dataset(rows, HERE / "dataset.jsonl")
+    dataset_path = dataset_path_for(docs, preset)
+    write_dataset(rows, dataset_path)
 
     client = Mistral(api_key=settings.MISTRALAI_API_KEY)
     all_chunks = []
@@ -482,7 +510,11 @@ def main():
         build_vector_store(all_chunks, docs, args.force)
 
     _log("Préparation terminée. Lancer maintenant:")
-    _log("  uv run python evaluation/financebench/run_financebench_eval.py --mode both")
+    if dataset_path.name == "dataset.jsonl":
+        _log("  uv run python evaluation/financebench/run_financebench_eval.py --mode both")
+    else:
+        _log(f"  uv run python evaluation/financebench/run_financebench_eval.py --mode both "
+             f"--dataset {dataset_path.relative_to(ROOT_DIR)} --out-dir evaluation/financebench/outputs_{dataset_path.stem}")
 
 
 if __name__ == "__main__":

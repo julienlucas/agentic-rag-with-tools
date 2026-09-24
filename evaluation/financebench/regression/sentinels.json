@@ -1,0 +1,25 @@
+{
+  "description": "Questions que le système réussit au run du 4 septembre 2026 (outputs/financebench_results.json). Chacune protège un comportement précis ; 'why' dit lequel. Attentes : verdict du juge, et page de preuve montrée au modèle (initiale ou ramenée par un outil). Le nombre d'appels d'outils n'est pas imposé : un meilleur retrieval qui rend l'outil inutile n'est pas une régression.",
+  "sentinels": [
+    {"id": "financebench_id_00222", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "quick ratio AMD : calcul à partir du bilan, trouvé par grep + read_page (baseline sans outils : INCORRECT)"},
+    {"id": "financebench_id_01091", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "litiges Boeing : preuve au rang 31, hors du top-10, atteignable seulement par les outils"},
+    {"id": "financebench_id_00735", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "litiges PepsiCo : preuve au rang 24, lecture de plusieurs pages"},
+    {"id": "financebench_id_01328", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "coûts de restructuration PepsiCo : grep exhaustif puis lecture du compte de résultat (baseline : INCORRECT)"},
+    {"id": "financebench_id_01964", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "plus gros passif American Express : lecture du bilan entier par read_page (baseline : INCORRECT)"},
+    {"id": "financebench_id_00476", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "titres de dette cotés American Express : page de garde du 10-K, via grep"},
+    {"id": "financebench_id_04481", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "marge d'EBITDA PepsiCo : question metrics-generated, calcul numérique exact"},
+    {"id": "financebench_id_00917", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "marge opérationnelle AMD : preuve au rang 1, réponse directe sans outil"},
+    {"id": "financebench_id_00517", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "catégories > 20 % du CA Boeing : preuve au rang 1, lecture de tableau"},
+    {"id": "financebench_id_00494", "verdict": "CORRECT", "evidence_seen": true,
+     "why": "cadences de production Boeing 2023 : preuve au rang 1, réponse directe"}
+  ]
+}
