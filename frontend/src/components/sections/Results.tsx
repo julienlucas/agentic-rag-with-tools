@@ -98,6 +98,115 @@ const levers = [
   },
 ];
 
+/*
+ * Métriques détaillées du même run (4 sept. 2026), calculées a posteriori sur les réponses et les
+ * pages sauvegardées : evaluation/financebench/README.md, sections « Faithfulness et answer
+ * relevancy » et « Métriques de retrieval ». Le retrieval initial est le même dans les deux modes.
+ */
+type MetricRow = { metric: string; baseline: string; agentic: string; hint: string };
+
+const metricGroups: { title: string; rows: MetricRow[] }[] = [
+  {
+    title: "Retrieval (10 passages initiaux, avant les outils)",
+    rows: [
+      {
+        metric: "recall@5 · @10 · @20",
+        baseline: "20,3 · 34,0 · 55,7 %",
+        agentic: "identique",
+        hint: "part des passages de preuve retrouvés dans les k premiers",
+      },
+      {
+        metric: "precision@5 · @10 · @20",
+        baseline: "14,6 · 13,1 · 8,7 %",
+        agentic: "identique",
+        hint: "part des k premiers passages issus d'une page de preuve · plafonnée : 1 à 2 pages de preuve par question",
+      },
+    ],
+  },
+  {
+    title: "Réponse",
+    rows: [
+      {
+        metric: "Faithfulness",
+        baseline: "4,73 / 5",
+        agentic: "4,79 / 5",
+        hint: "la réponse s'en tient aux extraits · note du juge LLM",
+      },
+      {
+        metric: "Answer relevancy",
+        baseline: "0,71",
+        agentic: "0,81",
+        hint: "la réponse traite la question posée · méthode RAGAS, 0 à 1",
+      },
+      {
+        metric: "… sur les réponses correctes",
+        baseline: "0,84 (17)",
+        agentic: "0,80 (20)",
+        hint: "",
+      },
+      {
+        metric: "… sur les réponses fausses",
+        baseline: "0,60 (7)",
+        agentic: "0,84 (4)",
+        hint: "les erreurs de l'agent restent centrées sur la question : mauvais chiffre, pas hors sujet",
+      },
+      {
+        metric: "… sur les refus",
+        baseline: "0 (2)",
+        agentic: "aucun refus",
+        hint: "un refus vaut 0 : l'essentiel de l'écart entre les deux modes",
+      },
+    ],
+  },
+];
+
+function MetricsTable() {
+  return (
+    <figure className="card-paper border-hairline mt-14 p-8">
+      <figcaption className="display-sm">Le détail des métriques</figcaption>
+      <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+        Même run, mêmes 26 questions. « Sans outils » : une seule génération sur les 10 passages
+        initiaux. « Avec outils » : le modèle cherche avec search / grep / read_page avant de
+        répondre. Entre parenthèses, le nombre de réponses concernées.
+      </p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted-foreground">
+              <th className="py-2 pr-4 font-medium">Métrique</th>
+              <th className="py-2 pr-4 font-medium">Sans outils</th>
+              <th className="py-2 font-medium">Avec outils</th>
+            </tr>
+          </thead>
+          {metricGroups.map((g) => (
+            <tbody key={g.title}>
+              <tr>
+                <th colSpan={3} className="eyebrow pb-1 pt-5 text-left font-normal">
+                  {g.title}
+                </th>
+              </tr>
+              {g.rows.map((r) => (
+                <tr key={r.metric} className="border-t border-hairline align-top">
+                  <td className="py-2 pr-4">
+                    <span className="font-medium">{r.metric}</span>
+                    {r.hint && (
+                      <span className="mt-0.5 block text-[0.7rem] leading-snug text-muted-foreground">
+                        {r.hint}
+                      </span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap py-2 pr-4 tabular-nums">{r.baseline}</td>
+                  <td className="whitespace-nowrap py-2 tabular-nums font-medium">{r.agentic}</td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </figure>
+  );
+}
+
 function Bar({ value, tone, label }: { value: number; tone: "before" | "after" | "mistral"; label: string }) {
   return (
     <Tooltip>
@@ -314,6 +423,8 @@ export function Results() {
           </blockquote>
         </div>
       </figure>
+
+      <MetricsTable />
 
       <div className="mt-16">
         <h3 className="display-md max-w-3xl">Ce qui a été fait</h3>
