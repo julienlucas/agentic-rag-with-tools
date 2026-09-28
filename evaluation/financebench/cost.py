@@ -15,8 +15,10 @@ from typing import Dict, Optional
 
 # Grille publique La Plateforme (https://mistral.ai/pricing/api) et Cohere
 # (https://cohere.com/pricing), relevée le 5 septembre 2026, en dollars.
+# Claude : grille Anthropic de la Claude API, relevée le 28 septembre 2026.
 PRICES_USD = {
     # $ par million de tokens (entrée, sortie)
+    "claude-sonnet-5": {"input_per_m": 2.00, "output_per_m": 10.00},
     "mistral-large": {"input_per_m": 0.50, "output_per_m": 1.50},
     "mistral-small": {"input_per_m": 0.15, "output_per_m": 0.60},
     "mistral-embed": {"input_per_m": 0.10, "output_per_m": 0.0},

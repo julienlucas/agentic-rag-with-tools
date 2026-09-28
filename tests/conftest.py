@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 os.environ.setdefault("MISTRALAI_API_KEY", "test-key")
+os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
 os.environ.setdefault("COHERE_API_KEY", "test-key")
 os.environ.setdefault("LANGSMITH_API_KEY", "")
 

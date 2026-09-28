@@ -8,10 +8,20 @@ load_dotenv()
 class Settings(BaseSettings):
     # Paramètres requis
     MISTRALAI_API_KEY: str = os.getenv("MISTRALAI_API_KEY")
-    MODEL_ID: str = "mistral-large-latest"  # Réservé à la génération finale
+    MODEL_ID: str = "mistral-large-latest"  # HyDE, décomposition, compression, juge d'éval
     MODEL_SMALL_ID: str = "mistral-small-latest"  # Sous-agents (classif, reformulation)
     MODEL_OCR_ID: str = "mistral-ocr-latest"
     EMBEDDING_MODEL_ID: str = "mistral-embed"
+
+    # Raisonnement (génération avec outils + agent de recherche) : Claude Sonnet 5.
+    # Pas de `temperature` : Sonnet 5 la refuse (400). La réflexion adaptative est active
+    # par défaut, ses tokens comptent dans max_tokens : d'où un plafond large, la longueur
+    # de la réponse reste tenue par le prompt. Effort : low | medium | high | xhigh | max.
+    ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
+    REASONING_MODEL_ID: str = "claude-sonnet-5"
+    REASONING_EFFORT: str = "medium"
+    REASONING_MAX_TOKENS: int = 8000
+    REASONING_TIMEOUT: int = 90  # la réflexion allonge les appels, 30 s ne suffit pas
 
     # Timeouts et retries sur les appels LLM (évite les blocages de 2min)
     LLM_TIMEOUT: int = 30  # secondes par appel
@@ -97,7 +107,7 @@ class Settings(BaseSettings):
     #  - "rewrite" : l'ancienne réécriture aveugle de la question par Mistral Small.
     # L'agent retombe sur "rewrite" si l'appel d'outils échoue (modèle sans function calling).
     CORRECTIVE_MODE: str = "agent"
-    # Plafond d'appels d'outils par question corrigée. ~3 s par appel avec Mistral Large.
+    # Plafond d'appels d'outils par question corrigée.
     CORRECTIVE_MAX_TOOL_CALLS: int = 5
     # Déclencheur : score max du reranker Cohere sous ce seuil = le retrieval a
     # probablement raté -> corriger. (NO_MATCH du checker déclenche toujours ;

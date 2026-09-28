@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_mistralai import ChatMistralAI
 from ..config.settings import settings
+from .reasoning_llm import reasoning_llm
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,28 +10,14 @@ logger = logging.getLogger(__name__)
 class ResearchAgent:
     def __init__(self):
         """
-        Initialiser l'agent de recherche avec Mistral ChatMistralAI.
+        Initialiser l'agent de recherche avec le modèle de raisonnement (Claude Sonnet 5).
         """
 
-        logger.info("Initialisation de ResearchAgent avec Mistral ChatMistralAI...")
-        self.model = ChatMistralAI(
-            model=settings.MODEL_ID,
-            api_key=settings.MISTRALAI_API_KEY,
-            temperature=0,  # Déterministe pour éviter les hallucinations
-            max_tokens=500,
-            timeout=settings.LLM_TIMEOUT,
-            max_retries=settings.LLM_MAX_RETRIES,
-        )
-        # Même modèle, plus de tokens : la réponse peut suivre plusieurs tours d'outils et
-        # doit pouvoir poser un calcul (formule + chiffres cités + résultat).
-        self.model_tools = ChatMistralAI(
-            model=settings.MODEL_ID,
-            api_key=settings.MISTRALAI_API_KEY,
-            temperature=0,
-            max_tokens=700,
-            timeout=settings.LLM_TIMEOUT,
-            max_retries=settings.LLM_MAX_RETRIES,
-        )
+        logger.info(f"Initialisation de ResearchAgent avec {settings.REASONING_MODEL_ID}...")
+        self.model = reasoning_llm()
+        # Même instance : la réponse avec outils suit plusieurs tours et pose parfois un calcul,
+        # le plafond de REASONING_MAX_TOKENS couvre les deux cas.
+        self.model_tools = self.model
         logger.info("ModelInference initialisé avec succès.")
 
     def sanitize_response(self, response_text: str) -> str:
@@ -168,9 +154,10 @@ Quand les utiliser — dans le doute, vérifiez : un appel d'outil coûte moins 
             logger.error(f"Erreur lors de l'inférence du modèle: {e}")
             raise RuntimeError("Échec de la génération de réponse en raison d'une erreur de modèle.") from e
 
-        # Extraire et traiter la réponse du LLM
+        # Extraire et traiter la réponse du LLM (blocs de réflexion ignorés)
+        from .search_agent import message_text
         try:
-            llm_response = response.content.strip()
+            llm_response = message_text(response).strip()
             logger.debug(f"Réponse brute du LLM:\n{llm_response}")
         except (IndexError, KeyError) as e:
             logger.error(f"Structure de réponse inattendue: {e}")

@@ -369,13 +369,15 @@ def breakdown(results: List[Dict], field: str, k_values: List[int]) -> Dict:
     for key, rows in sorted(groups.items()):
         verdicts = [r["verdict"] for r in rows if r.get("verdict")]
         page_hits = [r.get(page_key) for r in rows if r.get(page_key) is not None]
+        # Les lignes en échec n'ont pas de F1 : sans ce filtre, un run où tout échoue plante ici
+        f1s = [r["answer_f1"] for r in rows if "answer_f1" in r]
         out[key] = {
             "count": len(rows),
             "accuracy": round(sum(1 for v in verdicts if v == "CORRECT") / len(verdicts), 4) if verdicts else None,
             "hallucination_rate": round(sum(1 for v in verdicts if v == "INCORRECT") / len(verdicts), 4) if verdicts else None,
             "refusal_rate": round(sum(1 for v in verdicts if v == "REFUSAL") / len(verdicts), 4) if verdicts else None,
             page_key: round(mean(page_hits), 4) if page_hits else None,
-            "mean_f1": round(mean(r["answer_f1"] for r in rows), 4),
+            "mean_f1": round(mean(f1s), 4) if f1s else None,
         }
     return out
 

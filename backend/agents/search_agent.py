@@ -29,13 +29,13 @@ from typing import Callable, Dict, List, Optional
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
-from langchain_mistralai import ChatMistralAI
 
 from ..config.settings import settings
 from ..retriever.page_store import PageStore, doc_label
 from ..utils.logging import logger
 from ..utils.resilience import is_rate_limit
 from .corrective_retrieval import CorrectiveRetrieval, _find_reranker
+from .reasoning_llm import reasoning_llm
 
 
 def _key(doc: Document) -> str:
@@ -255,14 +255,7 @@ class SearchAgent:
 
     def _get_llm(self):
         if self.llm is None:
-            self.llm = ChatMistralAI(
-                model=settings.MODEL_ID,
-                api_key=settings.MISTRALAI_API_KEY,
-                temperature=0,
-                max_tokens=400,
-                timeout=settings.LLM_TIMEOUT,
-                max_retries=settings.LLM_MAX_RETRIES,
-            )
+            self.llm = reasoning_llm()
         return self.llm
 
     @staticmethod

@@ -11,6 +11,7 @@ jobs:
     env:
       # Clés factices : les tests n'appellent aucune API.
       MISTRALAI_API_KEY: ci-dummy
+      ANTHROPIC_API_KEY: ci-dummy
       COHERE_API_KEY: ci-dummy
       LANGSMITH_API_KEY: ""
     steps:
