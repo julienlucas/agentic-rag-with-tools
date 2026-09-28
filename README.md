@@ -1,4 +1,4 @@
-# RAG Agentique évalué ~83 % de réponses correctes sur un sous-ensemble de FinanceBench
+# RAG Agentique évalué ~96 % de réponses correctes sur un sous-ensemble de FinanceBench
 ![RAG Agentique multi-agent Header](./static/header-a.png)
 
 Si vous appréciez, ajoutez une ⭐ au repo pour soutenir mon travail. 🙏
@@ -8,11 +8,11 @@ par document et un modèle de réponse équipé d'outils (`search` / `grep` / `r
 rapports SEC de 150 à 260 pages. Il est **mesuré** sur
 [FinanceBench](https://github.com/patronus-ai/financebench), le benchmark utilisé par Mistral pour
 évaluer Agentic Search (150 questions). Le résultat qui compte est l'ablation, à retrieval
-strictement identique : **83,3 % de réponses correctes avec les outils, contre 65,4 % sans**, et
-des hallucinations qui passent de 26,9 % à 16,7 %. Dix-huit points gagnés par l'agent équipé, sur
-le même index et les mêmes 10 passages initiaux. Le run complet coûte environ 0,30 € à relancer.
-Tous les chiffres sont reproductibles à partir des sorties versionnées dans
-`evaluation/financebench/outputs/` —
+strictement identique : **96,2 % de réponses correctes avec les outils, contre 76,9 % sans**, et
+des hallucinations qui passent de 15,4 % à 3,8 %. Dix-neuf points gagnés par l'agent équipé, sur
+le même index et les mêmes 10 passages initiaux. Le run complet coûte environ 1 € à relancer.
+Tous les chiffres sont reproductibles à partir des sorties dans
+`evaluation/financebench/outputs_sonnet5/` —
 [résultats, coût et limites](#évaluation-financebench-documents-financiers-difficiles).
 
 ## Architecture IA à la base avant améliorations
@@ -49,7 +49,8 @@ Chaque passage ramené par un outil reçoit un numéro `[n]`, affiché dans le r
 - ⚡ Mistral OCR 4
 - 🧠 Mistral Embed (embeddings)
 - 🧠 Cohere Rerank v4 Pro multi-langue
-- 💎 Mistral Large (recherche à outils + génération) + Mistral Small (sous-agents : pertinence, routage, multi-query)
+- 💎 Claude Sonnet 5 (recherche à outils + génération) + Mistral Small (sous-agents : pertinence, routage, multi-query)
+- ⚖️ Mistral Large (juge LLM de l'évaluation)
 
 ## Installation
 
@@ -66,9 +67,10 @@ uv sync
 3. **Configuration** :
 Allez sur https://console.mistral.ai pour créer votre clé.
 
-Puis créer un fichier `.env` avec vos clés ([console.mistral.ai](https://console.mistral.ai) et [dashboard.cohere.com](https://dashboard.cohere.com)) :
+Puis créer un fichier `.env` avec vos clés ([console.mistral.ai](https://console.mistral.ai), [platform.claude.com](https://platform.claude.com) et [dashboard.cohere.com](https://dashboard.cohere.com)) :
 ```bash
 MISTRALAI_API_KEY=votre_clé_api_mistral_ici
+ANTHROPIC_API_KEY=votre_clé_api_anthropic_ici
 COHERE_API_KEY=votre_clé_api_cohere_ici
 ```
 
@@ -106,44 +108,44 @@ uv run python evaluation/financebench/prepare.py
 uv run python evaluation/financebench/run_financebench_eval.py --mode both
 ```
 
-**Résultats** — run du 4 septembre 2026 (soir), versionné dans `evaluation/financebench/outputs/`.
-26 questions, 4 filings, index combiné, juge LLM au protocole du benchmark, comptages bruts.
+**Résultats** — run du 28 septembre 2026, dans `evaluation/financebench/outputs_sonnet5/`.
+Modèle de raisonnement : Claude Sonnet 5. 26 questions, 4 filings, index combiné, juge LLM
+(Mistral Large) au protocole du benchmark, comptages bruts.
 Les deux premières lignes sont l'ablation : même index, même retrieval, mêmes 10 passages
 initiaux, la seule différence est le modèle de réponse avec ou sans outils.
 
 | | Correctes | Hallucinations | Refus |
 |---|---|---|---|
-| Ce RAG, **avec** les outils (search / grep / read_page) | **83,3 % (20/24)** | 16,7 % (4/24) | 0 |
-| Ce RAG, **sans** les outils (même retrieval, une seule génération) | 65,4 % (17/26) | 26,9 % (7/26) | 2 |
+| Ce RAG, **avec** les outils (search / grep / read_page) | **96,2 % (25/26)** | 3,8 % (1/26) | 0 |
+| Ce RAG, **sans** les outils (même retrieval, une seule génération) | 76,9 % (20/26) | 15,4 % (4/26) | 2 |
 | Mistral Agentic Search — repère externe (Medium 3.5, 150 questions) | 86 % | | |
 | Outils RAG juridiques commerciaux (étude Stanford) | 42-65 % | 17-33 % | |
 | RAG naïf — papier FinanceBench (GPT-4-Turbo 2023, benchmark complet) | ~19 % | 81 % de réponses fausses ou refusées | |
 
-**Pourquoi 24 et non 26 sur la ligne avec outils.** Deux questions (AMD, American Express) ont
-échoué techniquement en mode avec outils — timeout ou LLM indisponible pendant la boucle d'appels,
-pas une mauvaise réponse. Le protocole les compte à part et les sort du dénominateur, pour ne pas
-les confondre avec des refus. Comptées comme fausses, la ligne serait à 76,9 % (20/26) : toujours
-onze points au-dessus du même système sans outils. Le chiffre canonique du projet est **83,3 %
-(20/24)**.
+Aucune erreur technique sur ce run : les 26 questions sont jugées dans les deux modes. Le run
+précédent, sur Mistral Large (4 septembre 2026, `evaluation/financebench/outputs/`), donnait
+83,3 % (20/24) avec outils et 65,4 % sans. Le retrieval mesuré diffère aussi entre les deux runs
+(recall@5 : 20 % → 42 %) : l'écart ne mesure donc pas le seul effet du modèle.
 
 Les lignes Mistral, Stanford et papier FinanceBench portent sur des échantillons différents de ce
 RAG : ce sont des repères d'ordre de grandeur, pas un match à armes égales. Avec 26 questions,
 l'intervalle de confiance à 95 % fait une trentaine de points : la comparaison qui tient est celle
-des deux premières lignes, pas l'écart de trois points avec Mistral.
+des deux premières lignes, pas l'écart avec Mistral.
 
 **Coût.** Le runner compte les tokens facturés de chaque appel (génération, sous-agents, juge LLM)
 et les unités de recherche Cohere, et écrit le total dans `financebench_summary.json` (`cost`).
-Mesuré le 5 septembre 2026 sur un run complet (26 questions, les deux modes, juge LLM compris) :
+Mesuré le 28 septembre 2026 sur un run complet (26 questions, les deux modes, juge LLM compris) :
 
 | Poste | Volume | Coût |
 |---|---|---|
-| Mistral Large (réponse avec et sans outils, juge) | 422 k tokens en entrée, 29 k en sortie | 0,25 $ |
-| Mistral Small (sous-agents) | 30 k tokens | 0,005 $ |
-| Cohere Rerank 4 Pro | ~35 recherches à 0,0025 $ | 0,09 $ |
-| **Un run complet** (4 à 5 minutes) | | **≈ 0,35 $ ≈ 0,30 €** |
+| Claude Sonnet 5 (réponse avec et sans outils) | 371 k tokens en entrée, 31 k en sortie | 1,05 $ |
+| Mistral Large (juge) | 144 k tokens en entrée, 5 k en sortie | 0,08 $ |
+| Mistral Small (sous-agents) | 61 k tokens | 0,01 $ |
+| Cohere Rerank 4 Pro | 30 recherches à 0,0025 $ | 0,07 $ |
+| **Un run complet** (10 minutes, 1 worker) | | **≈ 1,21 $ ≈ 1,04 €** |
 | Préparation, une seule fois (OCR de 1 074 pages, embedding de 12 400 chunks) | | 4,4 $ ≈ 3,8 € |
 
-Grille publique La Plateforme et Cohere du 5 septembre 2026, 1 $ = 0,86 €. Autrement dit :
+Grilles publiques Anthropic (28 septembre 2026), La Plateforme et Cohere (5 septembre 2026), 1 $ = 0,86 €. Autrement dit :
 l'évaluation complète, reproductible, sur quatre 10-K, se relance pour le prix d'un café, et le
 chiffre de précision qu'on annonce à un client est re-mesurable à chaque changement de prompt.
 

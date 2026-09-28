@@ -14,14 +14,14 @@ const agents = [
     icon: <Redo2 />,
     index: "A2",
     title: "Agent de recherche et de réponse",
-    model: "mistral-large",
+    model: "claude-sonnet-5",
     text: "Reçoit les 10 meilleurs passages et trois outils — search (le retrieval hybride + rerank), grep (occurrences page par page, exhaustif) et read_page (la page entière, tableau compris, sur 1 à 3 pages). Il répond directement si le contexte suffit ; sinon il cherche, en voyant chaque résultat avant de décider du suivant (5 appels au plus), et répond dans la même conversation. Chaque passage ramené reçoit un numéro qu'il cite.",
   },
   {
     icon: <Sparkles />,
     index: "A3",
     title: "Génération contrainte",
-    model: "mistral-large",
+    model: "claude-sonnet-5",
     text: "La réponse ne s'appuie que sur les passages numérotés, initiaux ou ramenés par les outils, avec une citation [n] après chaque affirmation. Elle refuse explicitement quand l'information n'y est pas — sauf pour calculer un ratio dont les composantes sont sous ses yeux, formule et chiffres cités.",
   },
 ];

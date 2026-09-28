@@ -45,40 +45,36 @@ const toolGains = [
 
 const toolsHere = [
   {
-    value: "65,4 → 83,3 %",
+    value: "76,9 → 96,2 %",
     label: "de réponses correctes",
     detail: "même index, même retrieval, mêmes 10 passages initiaux : la seule différence, ce sont les outils",
   },
   {
-    value: "26,9 → 16,7 %",
+    value: "15,4 → 3,8 %",
     label: "d'hallucinations",
-    detail: "7 réponses fausses sur 26 sans outils, 4 sur 24 avec",
+    detail: "4 réponses fausses sur 26 sans outils, 1 sur 26 avec",
   },
   {
-    value: "9 sur 26",
+    value: "8 sur 26",
     label: "questions ont appelé un outil",
-    detail: "3,9 appels en moyenne, une page lue dans 8 cas sur 9 ; les 17 autres répondent en une passe, sans un token de plus",
+    detail: "1,75 appel en moyenne, une page lue dans 7 cas sur 8 ; les 18 autres répondent en une passe, sans un token de plus",
   },
 ];
 
 const limits = [
   {
     title: "Le recall du retrieval",
-    text: "Sur 8 questions sur 26, la page de preuve n'atteint jamais le modèle, outils compris. Quand elle l'atteint, il répond juste dans 15 cas sur 18.",
+    text: "Sur 6 questions sur 26, la page de preuve annotée n'atteint jamais le modèle, outils compris : il y répond pourtant juste, à partir d'autres pages du 10-K. Quand elle l'atteint, il répond juste dans 19 cas sur 20.",
   },
   {
-    title: "Le modèle de raisonnement est limité",
+    title: "Le coût du modèle de raisonnement",
     text: (
       <>
-        Ce RAG agentique répond avec{" "}
-        <img
-          src="/static/mistral.png"
-          alt="Mistral AI"
-          className="inline-block h-4 w-auto align-text-bottom"
-        />{" "}
-        Mistral Large (mistral-large-latest), et Mistral Small pour les sous-agents : un modèle de
-        raisonnement limité. Un modèle plus fort est un gros levier : le port TypeScript de ce projet,
-        sur Claude Sonnet 4.6, passe de 83 % à 92 % sur les mêmes 26 questions.
+        Ce RAG agentique répond avec Claude Sonnet 5 (claude-sonnet-5), et Mistral Small pour les
+        sous-agents. Sonnet 5 coûte 2 $ / 10 $ par million de tokens, contre 0,50 $ / 1,50 $ pour
+        Mistral Large : 1,05 $ de génération sur ce run de 26 questions, dans les deux modes. Le run
+        précédent, sur Mistral Large, donnait 83,3 % ; le retrieval mesuré diffère aussi entre les
+        deux (recall@5 : 20 % → 42 %), l&apos;écart ne mesure donc pas le seul effet du modèle.
       </>
     ),
   }

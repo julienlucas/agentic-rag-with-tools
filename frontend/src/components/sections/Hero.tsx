@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Container, Eyebrow } from "@/components/site/primitives";
 import { DemoChat } from "@/components/rag/DemoChat";
 
-type Vendor = "mistral" | "cohere";
+type Vendor = "mistral" | "cohere" | "anthropic";
 
 /*
  * Le flow n'est plus un arc-en-ciel d'icônes : les six étapes partagent le même
@@ -29,8 +29,8 @@ const steps: {
   { icon: <Search />, label: "Recherche hybride", model: "Mistral Embed", vendor: "mistral" },
   { icon: <ArrowDownUp />, label: "Reranking", model: "Cohere Rerank v4 Pro", vendor: "cohere" },
   { icon: <ShieldCheck />, label: "Vérification de pertinence", model: "Mistral Small", vendor: "mistral" },
-  { icon: <Redo2 />, label: "Recherche à outils", model: "Mistral Large", vendor: "mistral" },
-  { icon: <Sparkles />, label: "Réponse sourcée", model: "Mistral Large", vendor: "mistral", accent: true },
+  { icon: <Redo2 />, label: "Recherche à outils", model: "Claude Sonnet 5", vendor: "anthropic" },
+  { icon: <Sparkles />, label: "Réponse sourcée", model: "Claude Sonnet 5", vendor: "anthropic", accent: true },
 ];
 
 const tooling = [
@@ -63,7 +63,7 @@ export function Hero() {
             <h1 className="display-xl mt-4">
               RAG <span className="accent-italic">agentique</span>
               <span className="display-md mt-2 block text-ink">
-                Discutez avec quantité de documents, avec citation des sources — évalué ~83 % de réponses correctes
+                Discutez avec quantité de documents, avec citation des sources — évalué ~96 % de réponses correctes
                 sur un sous-ensemble de FinanceBench
               </span>
             </h1>

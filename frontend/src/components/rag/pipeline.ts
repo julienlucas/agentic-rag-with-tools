@@ -49,7 +49,7 @@ export const pipelineSteps: PipelineStep[] = [
     label: "Recherche à outils",
     detail:
       "Si le contexte ne suffit pas, le modèle enchaîne search / grep / read_page (5 appels max) ; chaque passage ramené est numéroté et s'ajoute après les 10 initiaux.",
-    model: "mistral-large",
+    model: "claude-sonnet-5",
     conditional: true,
     ms: 0,
   },
@@ -58,7 +58,7 @@ export const pipelineSteps: PipelineStep[] = [
     label: "Agent de recherche et de réponse",
     detail:
       "Reçoit les 10 meilleurs passages et les outils, rédige la réponse avec citations [n] — refuse explicitement si la preuve est absente.",
-    model: "mistral-large",
+    model: "claude-sonnet-5",
     ms: 0,
   },
 ];

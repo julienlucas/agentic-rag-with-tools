@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /*
- * Chiffres : evaluation/financebench/outputs/financebench_summary.json — run du 4 sept. 2026,
+ * Chiffres : evaluation/financebench/outputs_sonnet5/financebench_summary.json — run du 28 sept. 2026,
  * 26 questions, 4 rapports 10-K, index combiné, juge LLM au protocole du benchmark.
+ * Modèle de raisonnement : Claude Sonnet 5 (le run précédent, sur Mistral Large, est dans outputs/).
  * Comptages bruts affichés à côté des pourcentages : on est sur 26 questions.
  * Le niveau « RAG naïf » est le chiffre publié dans le papier FinanceBench (Islam et al., 2023)
  * pour un RAG naïf sur vector store partagé, sur le benchmark complet — il n'a pas été re-mesuré
@@ -23,19 +24,19 @@ const levels = [
     tone: "muted" as const,
   },
   {
-    label: "Ce RAG, sans outils · Mistral Large",
+    label: "Ce RAG, sans outils · Claude Sonnet 5",
     setup:
-      "Même index, même retrieval, mêmes 10 passages initiaux, même modèle (Mistral Large) : une seule génération, sans search / grep / read_page. C'est le témoin qui mesure ce que les outils apportent.",
-    correct: "65,4 %",
-    wrong: "17 bonnes réponses sur 26 questions",
+      "Même index, même retrieval, mêmes 10 passages initiaux, même modèle (Claude Sonnet 5) : une seule génération, sans search / grep / read_page. C'est le témoin qui mesure ce que les outils apportent.",
+    correct: "76,9 %",
+    wrong: "20 bonnes réponses sur 26 questions",
     tone: "plain" as const,
   },
   {
-    label: "Ce RAG, avec outils · Mistral Large",
+    label: "Ce RAG, avec outils · Claude Sonnet 5",
     setup:
-      "Modèle de raisonnement : Mistral Large (mistral-large-latest, La Plateforme), Mistral Small pour les sous-agents · OCR Mistral · chunking parent / enfant · hybride BM25 + vecteurs · routage · reranking Cohere · vérificateur de pertinence · agent de recherche à outils (search / grep / read_page) · génération contrainte aux preuves",
-    correct: "83,3 %",
-    wrong: "20 bonnes réponses sur 24 questions jugées",
+      "Modèle de raisonnement : Claude Sonnet 5 (claude-sonnet-5, API Anthropic), Mistral Small pour les sous-agents · OCR Mistral · chunking parent / enfant · hybride BM25 + vecteurs · routage · reranking Cohere · vérificateur de pertinence · agent de recherche à outils (search / grep / read_page) · génération contrainte aux preuves",
+    correct: "96,2 %",
+    wrong: "25 bonnes réponses sur 26 questions",
     tone: "brand" as const,
   },
   {
@@ -62,18 +63,18 @@ const rows: Row[] = [
   {
     metric: "Correctes",
     before: 19,
-    noTools: 65.4,
-    after: 83.3,
+    noTools: 76.9,
+    after: 96.2,
     mistral: 86,
-    hint: "accuracy · verdict CORRECT du juge LLM · 20 sur 24 jugées (2 erreurs techniques exclues)",
+    hint: "accuracy · verdict CORRECT du juge LLM · 25 sur 26, aucune erreur technique",
   },
   {
     metric: "Fausses ou refusées",
     before: 81,
-    noTools: 34.6,
-    after: 16.7,
+    noTools: 23.1,
+    after: 3.8,
     mistral: 14,
-    hint: "avec outils : 16,7 % d'hallucinations + 0 % de refus · 34,6 % sans outils (26,9 % d'hallucinations + 7,7 % de refus) · plus bas = mieux",
+    hint: "avec outils : 3,8 % d'hallucinations + 0 % de refus · 23,1 % sans outils (15,4 % d'hallucinations + 7,7 % de refus) · plus bas = mieux",
     lowerIsBetter: true,
   },
 ];
@@ -81,7 +82,7 @@ const rows: Row[] = [
 const levers = [
   {
     title: "Un agent de recherche avec des outils",
-    text: "Le modèle de réponse cherche lui-même avec search (hybride + rerank), grep (occurrences page par page) et read_page (la page entière, tableau compris, 1 à 3 pages), 5 appels au plus, et répond dans la même conversation. Sur ce run : outils appelés sur 9 questions sur 26, une page lue dans 8 cas sur 9, six questions gagnées sur la baseline.",
+    text: "Le modèle de réponse cherche lui-même avec search (hybride + rerank), grep (occurrences page par page) et read_page (la page entière, tableau compris, 1 à 3 pages), 5 appels au plus, et répond dans la même conversation. Sur ce run : outils appelés sur 8 questions sur 26, une page lue dans 7 cas sur 8, six questions gagnées sur la baseline et une perdue.",
   },
   {
     title: "Reranking Cohere",
@@ -97,7 +98,7 @@ const levers = [
   },
   {
     title: "Génération contrainte",
-    text: "Mistral Large ne répond qu'à partir des passages retenus et refuse quand la preuve manque — sauf pour calculer un ratio dont les composantes sont sous ses yeux, formule et chiffres cités.",
+    text: "Claude Sonnet 5 ne répond qu'à partir des passages retenus et refuse quand la preuve manque — sauf pour calculer un ratio dont les composantes sont sous ses yeux, formule et chiffres cités.",
   },
   {
     title: "Chunking parent / enfant",
@@ -110,9 +111,9 @@ const levers = [
 ];
 
 /*
- * Métriques détaillées du même run (4 sept. 2026), calculées a posteriori sur les réponses et les
- * pages sauvegardées : evaluation/financebench/README.md, sections « Faithfulness et answer
- * relevancy » et « Métriques de retrieval ». Le retrieval initial est le même dans les deux modes.
+ * Métriques détaillées du même run (28 sept. 2026) : outputs_sonnet5/financebench_summary.json et,
+ * pour l'answer relevancy par verdict, financebench_results.json. Le retrieval initial est le même
+ * dans les deux modes.
  */
 type MetricRow = { metric: string; baseline: string; agentic: string; hint: string };
 
@@ -122,13 +123,13 @@ const metricGroups: { title: string; rows: MetricRow[] }[] = [
     rows: [
       {
         metric: "recall@5 · @10 · @20",
-        baseline: "20,3 · 34,0 · 55,7 %",
+        baseline: "42,4 · 57,9 · 67,2 %",
         agentic: "identique",
         hint: "part des passages de preuve retrouvés dans les k premiers",
       },
       {
         metric: "precision@5 · @10 · @20",
-        baseline: "14,6 · 13,1 · 8,7 %",
+        baseline: "33,9 · 26,2 · 16,5 %",
         agentic: "identique",
         hint: "part des k premiers passages issus d'une page de preuve · plafonnée : 1 à 2 pages de preuve par question",
       },
@@ -139,14 +140,14 @@ const metricGroups: { title: string; rows: MetricRow[] }[] = [
     rows: [
       {
         metric: "Correctes",
-        baseline: "65,4 % (17)",
-        agentic: "83,3 % (20)",
-        hint: "verdict CORRECT du juge LLM · avec outils : 20 sur 24 jugées (2 erreurs techniques exclues)",
+        baseline: "76,9 % (20)",
+        agentic: "96,2 % (25)",
+        hint: "verdict CORRECT du juge LLM · 26 questions jugées dans les deux modes",
       },
       {
         metric: "Hallucinations",
-        baseline: "26,9 % (7)",
-        agentic: "16,7 % (4)",
+        baseline: "15,4 % (4)",
+        agentic: "3,8 % (1)",
         hint: "réponse affirmée mais fausse",
       },
       {
@@ -157,27 +158,27 @@ const metricGroups: { title: string; rows: MetricRow[] }[] = [
       },
       {
         metric: "Faithfulness",
-        baseline: "4,73 / 5",
-        agentic: "4,79 / 5",
+        baseline: "4,85 / 5",
+        agentic: "4,96 / 5",
         hint: "la réponse s'en tient aux extraits · note du juge LLM",
       },
       {
         metric: "Answer relevancy",
-        baseline: "0,71",
-        agentic: "0,81",
+        baseline: "0,70",
+        agentic: "0,80",
         hint: "la réponse traite la question posée · méthode RAGAS, 0 à 1",
       },
       {
         metric: "… sur les réponses correctes",
-        baseline: "0,84 (17)",
-        agentic: "0,80 (20)",
+        baseline: "0,79 (20)",
+        agentic: "0,79 (25)",
         hint: "",
       },
       {
         metric: "… sur les réponses fausses",
-        baseline: "0,60 (7)",
-        agentic: "0,84 (4)",
-        hint: "les erreurs de l'agent restent centrées sur la question : mauvais chiffre, pas hors sujet",
+        baseline: "0,61 (4)",
+        agentic: "0,93 (1)",
+        hint: "l'unique erreur de l'agent reste centrée sur la question : mauvais chiffre, pas hors sujet",
       },
       {
         metric: "… sur les refus",
@@ -399,7 +400,7 @@ export function Results() {
       eyebrow="L'évaluation"
       title={
         <>
-          Évalué à 83,3 % de réponses correctes sur le benchmark{" "}
+          Évalué à 96,2 % de réponses correctes sur le benchmark{" "}
           <span className="accent-italic">FinanceBench</span> (limité à 4
           documents et 26 questions).
         </>
@@ -454,13 +455,12 @@ export function Results() {
             Sur un sous-ensemble de FinanceBench (4 documents,{" "}
             <strong className="font-semibold text-ink">26 questions</strong>,
             index combiné), le système répond correctement à{" "}
-            <span className="accent-italic">20 des 24 questions jugées</span>,
-            avec 4 réponses fausses, aucun refus et 2 erreurs techniques
-            exclues. Le RAG naïf plafonne est{" "}
+            <span className="accent-italic">25 des 26 questions</span>,
+            avec 1 réponse fausse et aucun refus. Le RAG naïf plafonne{" "}
             <span className="accent-italic">
               à ~19 % sur le benchmark complet
             </span>
-            . Sans outils, le même système n'en répond que 17 sur 26 : les outils font gagner 18 points. Mistral Agentic Search (Mistral Medium 3.5)
+            . Sans outils, le même système n'en répond que 20 sur 26 : les outils font gagner 19 points. Mistral Agentic Search (Mistral Medium 3.5)
             annonce 86 % sur{" "}
             <strong className="font-semibold text-ink">150 questions</strong> et
             368 documents — soit un périmètre bien plus large, qui n&apos;est
