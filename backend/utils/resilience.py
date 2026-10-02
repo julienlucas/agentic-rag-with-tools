@@ -14,7 +14,8 @@ def is_rate_limit(exc: Exception) -> bool:
         text = f"{type(cur).__name__}: {cur}".lower()
         if "429" in text or "rate limit" in text or "rate_limited" in text \
            or "too many requests" in text or "capacity exceeded" in text \
-           or "service_tier_capacity_exceeded" in text:
+           or "service_tier_capacity_exceeded" in text \
+           or "throttlingexception" in text or "too many tokens" in text:  # Bedrock
             return True
         cur = cur.__cause__
     return False

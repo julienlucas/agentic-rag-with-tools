@@ -5,10 +5,10 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from typing import List
 from .document_processor.file_handler import DocumentProcessor
 from .retriever.builder import RetrieverBuilder
 from .retriever.page_store import PageStore
+from .vectorstore import QuotaExceeded, get_store
 from .agents.workflow import AgentWorkflow
 from .config import constants
 from .config.settings import settings
@@ -22,66 +22,77 @@ if settings.LANGSMITH_API_KEY:
     os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
     os.environ["LANGCHAIN_PROJECT"] = "agentic_rag_multi_agent"
 
-# Stockage des sessions (en production, utiliser Redis ou base de données)
-sessions = {}
+# Les documents vivent dans Qdrant, un espace par tenant. En attendant l'authentification,
+# le tenant est le session_id envoyé par le client : ce n'est PAS une isolation réelle
+# (quiconque connaît un session_id lit cet espace). Avec l'auth, le tenant viendra du jeton.
+
+# Pages OCR par (tenant, documents indexés) : évite de relire toutes les pages dans Qdrant
+# à chaque question. La clé change dès qu'un document est ajouté ou supprimé.
+_PAGE_CACHE_MAX = 32
+_page_cache = {}
+
+
+class BadTenant(ValueError):
+    pass
+
+
+def _tenant(session_id):
+    try:
+        return get_store().for_tenant(session_id)
+    except ValueError as e:
+        raise BadTenant(str(e)) from e
+
+
+def _page_store(tenant, documents):
+    key = (tenant.tenant_id, tuple(sorted(d["file_hash"] for d in documents)))
+    if key not in _page_cache:
+        if len(_page_cache) >= _PAGE_CACHE_MAX:
+            _page_cache.pop(next(iter(_page_cache)))
+        pages = tenant.pages()
+        _page_cache[key] = PageStore(pages) if pages else None
+    return _page_cache[key]
 
 # Workflow instancié une seule fois (les modèles LangGraph + LLM clients
 # sont réutilisés entre requêtes).
 _workflow = AgentWorkflow()
 
-def get_file_hashes(uploaded_files: List) -> frozenset:
-    """Générer des hashes SHA-256 pour les fichiers téléchargés"""
+def file_hash(file) -> str:
+    """SHA-256 du contenu : identifie un document dans l'espace du tenant."""
+    if hasattr(file, 'file_obj'):
+        file.file_obj.seek(0)
+        content = file.file_obj.read()
+        file.file_obj.seek(0)
+    else:
+        with open(file.name, "rb") as f:
+            content = f.read()
+    return hashlib.sha256(content).hexdigest()
 
-    hashes = set()
-    for file in uploaded_files:
-        if hasattr(file, 'file_obj'):
-            # Fichier uploadé - lire depuis file_obj
-            file.file_obj.seek(0)  # Remettre au début
-            content = file.file_obj.read()
-            hashes.add(hashlib.sha256(content).hexdigest())
-        else:
-            # Fichier local - lire depuis le chemin
-            with open(file.name, "rb") as f:
-                hashes.add(hashlib.sha256(f.read()).hexdigest())
-    return frozenset(hashes)
 
 def process_files(file_objects, session_id, success_message="Fichiers traités avec succès"):
-    """Fonction commune pour traiter les fichiers et mettre à jour la session"""
+    """Indexe les fichiers dans l'espace Qdrant du tenant ; un fichier déjà indexé est ignoré."""
+    tenant = _tenant(session_id)
+    hashes = {id(f): file_hash(f) for f in file_objects}
+    pending = [f for f in file_objects if not tenant.has_document(hashes[id(f)])]
 
-    # Initialiser la session si nécessaire
-    if session_id not in sessions:
-        sessions[session_id] = {
-            "file_hashes": frozenset(),
-            "retriever": None,
-            "page_store": None,
-        }
+    indexed = 0
+    if pending:
+        processor = DocumentProcessor()
+        chunks = processor.process(pending)
+        logger.info(f"Chunks générés: {len(chunks)}")
+        by_source = {}
+        for chunk in chunks:
+            by_source.setdefault(chunk.metadata.get("source"), []).append(chunk)
+        for f in pending:
+            file_chunks = by_source.get(f.name, [])
+            if not file_chunks:
+                return JsonResponse({"error": f"Aucun texte extrait de {os.path.basename(f.name)}."}, status=422)
+            indexed += tenant.add_document(hashes[id(f)], f.name, file_chunks, processor.pages.get(f.name, []))
 
-    # Traiter les documents
-    processor = DocumentProcessor()
-    retriever_builder = RetrieverBuilder()
-
-    chunks = processor.process(file_objects)
-    logger.info(f"Chunks générés: {len(chunks)}")
-
-    retriever = retriever_builder.build_hybrid_retriever(chunks)
-    logger.info(f"Retriever créé: {retriever is not None}")
-
-    # Pages OCR pour les outils grep / read_page de l'agent de recherche.
-    page_store = PageStore(processor.pages) if processor.pages else None
-
-    # Mettre à jour la session
-    current_hashes = get_file_hashes(file_objects)
-    sessions[session_id].update({
-        "file_hashes": current_hashes,
-        "retriever": retriever,
-        "page_store": page_store,
-    })
-
-    logger.info(f"Session {session_id} mise à jour. Retriever: {sessions[session_id]['retriever'] is not None}")
-
+    documents = tenant.documents()
+    logger.info(f"Tenant {tenant.tenant_id}: {len(documents)} document(s), {indexed} chunks ajoutés")
     return JsonResponse({
-        "message": success_message,
-        "chunks_count": len(chunks)
+        "message": success_message if pending else "Document déjà indexé",
+        "chunks_count": sum(d["chunk_count"] for d in documents if d["file_hash"] in hashes.values()),
     })
 
 @csrf_exempt
@@ -114,6 +125,8 @@ def upload_file(request):
         file_object = FileObject(file)
         return process_files([file_object], session_id, "Fichier traité avec succès")
 
+    except (BadTenant, QuotaExceeded) as e:
+        return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
         logger.error(f"Erreur lors du traitement du fichier: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
@@ -145,8 +158,10 @@ def load_file(request):
         response = process_files([file_obj], session_id, "Fichier chargé avec succès")
         response_data = json.loads(response.content)
         response_data["filename"] = file_name
-        return JsonResponse(response_data)
+        return JsonResponse(response_data, status=response.status_code)
 
+    except (BadTenant, QuotaExceeded) as e:
+        return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
         logger.error(f"Erreur lors du chargement du fichier: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
@@ -161,17 +176,15 @@ def process_question(request):
     session_id = data.get('session_id', 'default')
 
     try:
-        # Vérifier que la session existe et a un retriever
-        if session_id not in sessions:
+        tenant = _tenant(session_id)
+        documents = tenant.documents()
+        if not documents:
             return JsonResponse({"error": "Aucun document chargé. Veuillez d'abord charger un document."}, status=400)
-
-        if sessions[session_id]["retriever"] is None:
-            return JsonResponse({"error": "Aucun retriever disponible. Veuillez recharger le document."}, status=400)
 
         result = _workflow.full_pipeline(
             question=question,
-            retriever=sessions[session_id]["retriever"],
-            page_store=sessions[session_id].get("page_store"),
+            retriever=RetrieverBuilder().build_hybrid_retriever(tenant),
+            page_store=_page_store(tenant, documents),
         )
 
         return JsonResponse({
@@ -180,7 +193,52 @@ def process_question(request):
             "citations": result.get("citations", []),
         })
 
+    except BadTenant as e:
+        return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
         logger.error(f"Erreur lors du traitement de la question: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_documents(request):
+    """Documents de l'espace du tenant."""
+    try:
+        tenant = _tenant(request.GET.get('session_id', 'default'))
+        return JsonResponse({"documents": [
+            {"file_hash": d["file_hash"], "name": os.path.basename(d["source"]),
+             "chunk_count": d["chunk_count"], "page_count": d["page_count"]}
+            for d in tenant.documents()
+        ]})
+    except BadTenant as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_document(request):
+    """Supprime un document (par son hash) de l'espace du tenant."""
+    data = json.loads(request.body)
+    try:
+        tenant = _tenant(data.get('session_id', 'default'))
+        target = data.get('file_hash', '')
+        if not tenant.has_document(target):
+            return JsonResponse({"error": "Document inconnu dans cet espace."}, status=404)
+        tenant.delete_document(target)
+        return JsonResponse({"message": "Document supprimé"})
+    except BadTenant as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_space(request):
+    """Vide l'espace du tenant."""
+    data = json.loads(request.body)
+    try:
+        _tenant(data.get('session_id', 'default')).delete_all()
+        return JsonResponse({"message": "Espace vidé"})
+    except BadTenant as e:
+        return JsonResponse({"error": str(e)}, status=400)
 

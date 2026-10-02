@@ -3,7 +3,7 @@
 
 Si vous appréciez, ajoutez une ⭐ au repo pour soutenir mon travail. 🙏
 
-Ce système RAG combine un récupérateur hybride (BM25 + embeddings + reranking Cohere), un routage
+Ce système RAG combine un récupérateur hybride (BM25 + embeddings dans Qdrant, reranking Cohere), un routage
 par document et un modèle de réponse équipé d'outils (`search` / `grep` / `read_page`), sur des
 rapports SEC de 150 à 260 pages. Il est **mesuré** sur
 [FinanceBench](https://github.com/patronus-ai/financebench), le benchmark utilisé par Mistral pour
@@ -34,23 +34,26 @@ Trois opérations façon système de fichiers, données au modèle de réponse. 
 
 | Outil | Ce qu'il fait |
 |---|---|
-| `search(query, doc)` | Le retrieval hybride du pipeline (BM25 + vecteurs, routage, rerank Cohere), relancé avec une nouvelle requête, optionnellement restreint à un document. Renvoie 8 extraits avec document et page. |
+| `search(query, doc)` | Le retrieval hybride du pipeline (BM25 + vecteurs dans Qdrant, routage, rerank Cohere), relancé avec une nouvelle requête, optionnellement restreint à un document. Renvoie 8 extraits avec document et page. |
 | `grep(pattern, doc)` | Occurrences littérales d'un motif (regex, insensible à la casse), page par page, sur tout le document. Exhaustif : 0 résultat permet d'affirmer qu'un terme n'y figure pas. |
 | `read_page(doc, page, end_page)` | La page entière telle que l'OCR l'a produite, tableau compris — ce qu'un chunk de 1 200 caractères ne montre jamais. `end_page` lit 2 à 3 pages d'un coup pour un tableau à cheval. |
 
 Chaque passage ramené par un outil reçoit un numéro `[n]`, affiché dans le résultat, que la réponse cite comme les autres. Les 10 passages initiaux gardent leurs numéros : les outils ne peuvent qu'**ajouter** après eux. Le rapport de vérification renvoyé avec chaque réponse liste les appels effectués.
 
 ### Le système inclut un retriever hybride pour maximiser la pertinence
-- **Algo BM25 + Embeddings** : Recherche texte classique à forte précision lexicale + Recherche sémantique capturant le sens contextuel. L'index vectoriel déclare explicitement sa métrique (`VECTOR_SPACE = "cosine"`) : le défaut de Chroma est `l2`, qui n'est correct que tant que les embeddings sont normés.
+- **Algo BM25 + Embeddings, côté Qdrant** : chaque chunk porte un vecteur sparse BM25 (précision lexicale) et un vecteur dense (sens contextuel) ; les deux recherches sont fusionnées par RRF dans une seule requête Qdrant. Métrique explicite (`VECTOR_SPACE = "cosine"`).
+- **Un espace par utilisateur** : une collection Qdrant partagée, chaque point porte un `tenant_id` (index `is_tenant`), HNSW désactivé globalement (`m=0`) et construit par tenant (`payload_m`). Toutes les lectures passent par `backend/vectorstore/qdrant_store.py`, qui impose le filtre `tenant_id`. Les documents sont persistés : un fichier déjà indexé n'est ni ré-OCRisé ni ré-embeddé.
 - **Routage par document** : avant de chercher, le système cible le(s) document(s) que la question désigne (nom d'entreprise ou de fichier) — indispensable quand plusieurs documents longs sont indexés ensemble.
 - **Reranking Cohere + parent-child + multi-query** : petits chunks pour matcher, gros chunks pour répondre.
 
 ## Stack de modèles
-- ⚡ Mistral OCR 4
-- 🧠 Mistral Embed (embeddings)
-- 🧠 Cohere Rerank v4 Pro multi-langue
-- 💎 Claude Sonnet 5 (recherche à outils + génération) + Mistral Small (sous-agents : pertinence, routage, multi-query)
-- ⚖️ Mistral Large (juge LLM de l'évaluation)
+Les modèles passent par **Amazon Bedrock** (région `eu-west-3`), sauf l'OCR et le reranker :
+- ⚡ Mistral OCR (API Mistral, absent de Bedrock)
+- 🧠 Cohere Embed v4 (embeddings, 1024 dimensions)
+- 🧠 Cohere Rerank 4 Pro (API Cohere)
+- 💎 Claude Sonnet 4.6 (recherche à outils + génération) + Claude Haiku 4.5 (sous-agents : pertinence, routage, multi-query)
+- ⚖️ Mistral Large (juge LLM de l'évaluation, inchangé pour garder les scores comparables)
+- 🗄️ Qdrant Cloud (base vectorielle, HNSW par utilisateur)
 
 ## Installation
 
@@ -65,13 +68,20 @@ uv sync
 ```
 
 3. **Configuration** :
-Allez sur https://console.mistral.ai pour créer votre clé.
+- **AWS** : identifiants avec `bedrock:InvokeModel` et accès activé dans la console Bedrock à Claude Sonnet 4.6, Claude Haiku 4.5 et Cohere Embed v4. Les identifiants sont lus par la chaîne standard de boto3 (`~/.aws/credentials`, variables `AWS_*` ou rôle IAM).
+- **Qdrant** : un cluster sur [cloud.qdrant.io](https://cloud.qdrant.io) (AWS, région proche d'eu-west-3). Sans `QDRANT_URL`, Qdrant tourne en mémoire (données perdues au redémarrage).
+- **Mistral** : une clé sur [console.mistral.ai](https://console.mistral.ai), pour l'OCR.
+- **Cohere** : une clé sur [dashboard.cohere.com](https://dashboard.cohere.com), pour le reranker.
 
-Puis créer un fichier `.env` avec vos clés ([console.mistral.ai](https://console.mistral.ai), [platform.claude.com](https://platform.claude.com) et [dashboard.cohere.com](https://dashboard.cohere.com)) :
+Fichier `.env` :
 ```bash
 MISTRALAI_API_KEY=votre_clé_api_mistral_ici
-ANTHROPIC_API_KEY=votre_clé_api_anthropic_ici
 COHERE_API_KEY=votre_clé_api_cohere_ici
+QDRANT_URL=https://xxxx.eu-central-1-0.aws.cloud.qdrant.io:6333
+QDRANT_API_KEY=votre_clé_qdrant_ici
+# Si pas de ~/.aws/credentials (ex. en déploiement) :
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
 ```
 
 Pour surveiller votre application avec LangSmith (si vous le souhaitez) :

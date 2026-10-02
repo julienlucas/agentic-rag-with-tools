@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 
-from langchain_mistralai import ChatMistralAI
+from ..llm.bedrock import small_llm
 from ..config.settings import settings
 import logging
 
@@ -9,14 +9,7 @@ logger = logging.getLogger(__name__)
 
 class RelevanceChecker:
     def __init__(self):
-        self.model = ChatMistralAI(
-            model=settings.MODEL_SMALL_ID,
-            api_key=settings.MISTRALAI_API_KEY,
-            temperature=0,
-            max_tokens=10,
-            timeout=settings.LLM_TIMEOUT,
-            max_retries=settings.LLM_MAX_RETRIES,
-        )
+        self.model = small_llm(max_tokens=10)
 
     def check(self, question: str, documents, k=3) -> str:
         """

@@ -1,20 +1,19 @@
 """La chaîne de retrieval de production, montée par RetrieverBuilder, sans réseau.
 
-BM25, Chroma (en mémoire), parent-child, multi-query, rerank et routage sont les vrais
-composants ; seuls les modèles sont factices (embeddings déterministes, LLM et Cohere
-scriptés). Ce qui est vérifié, c'est le câblage : un maillon retiré, réordonné ou qui perd
+Qdrant (en mémoire, BM25 sparse + dense), parent-child, multi-query, rerank et routage sont
+les vrais composants ; seuls les modèles sont factices (embeddings et BM25 déterministes,
+LLM et reranker scriptés). Ce qui est vérifié, c'est le câblage : un maillon retiré, réordonné ou qui perd
 le périmètre du routeur en route fait échouer ces tests."""
 import re
 
 import pytest
-from langchain_core.embeddings import DeterministicFakeEmbedding
 
 from backend.config.settings import settings
 from backend.document_processor.chunkers import ParentChildChunkingStrategy
 from backend.document_processor.file_handler import DocumentProcessor
 from backend.retriever import builder as B
 from backend.retriever.parent_child_retriever import ParentChildRetriever
-from conftest import FakeRetriever, make_doc
+from conftest import FakeCohere, FakeRetriever, make_doc, make_store
 
 FILLER = " ".join(f"Paragraph {i} discusses general corporate matters and governance." for i in range(40))
 
@@ -43,35 +42,6 @@ class ScriptedLLM:
         return _R()
 
 
-class FakeCohere:
-    """Score = recouvrement lexical avec la requête, pour un ordre déterministe."""
-
-    def __init__(self, fail=False):
-        self.calls = []
-        self.fail = fail
-
-    def rerank(self, model, query, documents, top_n):
-        self.calls.append(len(documents))
-        if self.fail:
-            raise RuntimeError("cohere 503")
-        q = set(re.findall(r"\w+", query.lower()))
-
-        def score(text):
-            return len(q & set(re.findall(r"\w+", text.lower()))) / (len(q) or 1)
-
-        ranked = sorted(range(len(documents)), key=lambda i: score(documents[i]), reverse=True)[:top_n]
-
-        class _Res:
-            def __init__(self, i):
-                self.index, self.relevance_score = i, score(documents[i])
-
-        class _Resp:
-            results = [_Res(i) for i in ranked]
-            meta = None
-
-        return _Resp()
-
-
 def _chunks():
     strat = ParentChildChunkingStrategy(parent_chunk_size=600, child_chunk_size=150, child_overlap=30)
     out = []
@@ -89,15 +59,19 @@ def chain(monkeypatch):
     monkeypatch.setattr(settings, "DOCUMENT_ROUTING_ENABLED", True)
     for flag in ("HYDE_ENABLED", "QUERY_DECOMPOSITION_ENABLED", "CONTEXTUAL_COMPRESSION_ENABLED"):
         monkeypatch.setattr(settings, flag, False)
-    monkeypatch.setattr(settings, "CHROMA_COLLECTION_NAME", "test-chain")
+
+    tenant = make_store().for_tenant("alice")
+    chunks = _chunks()
+    for i, source in enumerate(CORPUS):
+        tenant.add_document(f"h{i}", source, [c for c in chunks if c.metadata["source"] == source], [])
 
     builder = B.RetrieverBuilder.__new__(B.RetrieverBuilder)
-    builder.embeddings = DeterministicFakeEmbedding(size=64)
+    builder.embeddings = None
     builder.llm = builder.llm_text = ScriptedLLM()
-    retriever = builder.build_hybrid_retriever(_chunks())
-    cohere = FakeCohere()
-    retriever.retriever._client = cohere  # DocumentRouterRetriever -> RerankRetriever
-    return retriever, cohere, builder.llm_text
+    retriever = builder.build_hybrid_retriever(tenant)
+    reranker = FakeCohere()
+    retriever.retriever._client = reranker  # DocumentRouterRetriever -> RerankRetriever
+    return retriever, reranker, builder.llm_text
 
 
 def test_chain_is_wired_in_the_expected_order(chain):
@@ -114,14 +88,14 @@ def test_chain_is_wired_in_the_expected_order(chain):
 
 
 def test_named_company_restricts_every_subquery_to_its_document(chain):
-    """Le périmètre (ContextVar) doit traverser les threads de multi-query jusqu'à BM25 et Chroma :
+    """Le périmètre (ContextVar) doit traverser les threads de multi-query jusqu'à Qdrant :
     Boeing parle aussi de quick ratio, il ne doit jamais remonter pour une question sur AMD."""
-    retriever, cohere, llm = chain
+    retriever, reranker, llm = chain
     docs = retriever.invoke("What is the quick ratio of AMD?")
     assert docs
     assert {d.metadata["source"] for d in docs} == {"/data/AMD_2022_10K.pdf"}
     assert any("reformulations" in p for p in llm.prompts), "multi-query n'a pas tourné"
-    assert cohere.calls, "le rerank n'a pas tourné"
+    assert reranker.calls, "le rerank n'a pas tourné"
 
 
 def test_results_are_reranked_parents_with_the_evidence_first(chain):
@@ -147,7 +121,7 @@ def test_rerank_failure_keeps_the_candidates_instead_of_failing(chain):
     assert docs and all("rerank_score" not in d.metadata for d in docs)
 
 
-def test_rerank_caps_candidates_sent_to_cohere(monkeypatch):
+def test_rerank_caps_candidates_sent_to_the_reranker(monkeypatch):
     monkeypatch.setattr(settings, "RERANK_ENABLED", True)
     rr = B.RerankRetriever(FakeRetriever(default=[make_doc(f"d{i}") for i in range(100)]), None, None)
     rr._client = FakeCohere()

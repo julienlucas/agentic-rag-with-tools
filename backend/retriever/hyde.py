@@ -1,6 +1,6 @@
 from typing import List
 from langchain_core.documents import Document
-from langchain_mistralai import ChatMistralAI
+from ..llm.bedrock import large_llm
 from ..config.settings import settings
 from ..utils.logging import logger
 
@@ -39,12 +39,7 @@ class HyDERetriever:
     def _get_llm(self):
         """Initialise le LLM si nécessaire."""
         if self.llm is None:
-            self.llm = ChatMistralAI(
-                model=settings.MODEL_ID,
-                api_key=settings.MISTRALAI_API_KEY,
-                temperature=0.7,
-                max_tokens=500,
-            )
+            self.llm = large_llm(max_tokens=500, temperature=0.7)
         return self.llm
 
     def _generate_hypothetical_answer(self, question: str) -> str:

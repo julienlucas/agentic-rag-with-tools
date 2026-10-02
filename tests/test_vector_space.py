@@ -1,13 +1,15 @@
 """
-La métrique de l'index vectoriel doit rester explicite.
+Le schéma Qdrant doit rester celui de la multi-tenancy : métrique explicite, HNSW par tenant.
 
-Le défaut de Chroma est "l2". Il n'est correct que tant que les embeddings sont normés
-(mistral-embed l'est). Un modèle non normé rendrait ce défaut faux sans erreur ni log :
-ces tests échouent si quelqu'un retire le réglage explicite.
+Le graphe global est désactivé (m=0) et chaque tenant a le sien (payload_m) via l'index
+`tenant_id` déclaré is_tenant. Un réglage retiré ne casse rien de visible (la recherche
+marche toujours) : il dégrade l'isolation physique ou la mémoire. Ces tests le rendent visible.
 """
-from unittest.mock import patch
+from qdrant_client import QdrantClient, models
 
 from backend.config.settings import settings
+from backend.vectorstore import QdrantStore
+from conftest import make_store
 
 
 def test_vector_space_is_explicit_and_valid():
@@ -15,41 +17,48 @@ def test_vector_space_is_explicit_and_valid():
     assert settings.VECTOR_SPACE == "cosine"
 
 
-def test_in_memory_store_declares_the_space():
-    """Le store de production (par session, en mémoire) doit poser hnsw:space."""
-    from backend.retriever import builder as B
+class SpyClient(QdrantClient):
+    """Qdrant local ignore HNSW et index de payload : on vérifie ce qui lui est DEMANDÉ."""
 
-    captured = {}
+    def __init__(self):
+        super().__init__(":memory:")
+        self.collections, self.indexes = {}, []
 
-    class FakeStore:
-        def as_retriever(self, **kw):
-            return object()
+    def create_collection(self, collection_name, **kwargs):
+        self.collections[collection_name] = kwargs
+        return super().create_collection(collection_name, **kwargs)
 
-    def fake_from_documents(documents, embedding, **kwargs):
-        captured.update(kwargs)
-        return FakeStore()
-
-    with patch.object(B, "Chroma") as chroma:
-        chroma.from_documents.side_effect = fake_from_documents
-        try:
-            B.RetrieverBuilder.build_hybrid_retriever(
-                _StubBuilder(), _one_doc(), persist_directory=None
-            )
-        except Exception:
-            # La chaîne complète (BM25, reranker...) n'est pas l'objet du test :
-            # seul compte ce qui a été passé à Chroma avant l'échec éventuel.
-            pass
-
-    assert captured.get("collection_metadata") == {"hnsw:space": settings.VECTOR_SPACE}
+    def create_payload_index(self, collection_name, field_name, field_schema=None, **kwargs):
+        self.indexes.append((collection_name, field_name, field_schema))
+        return super().create_payload_index(collection_name, field_name, field_schema=field_schema, **kwargs)
 
 
-class _StubBuilder:
-    embeddings = object()
-    llm = object()
-    llm_text = object()
+def test_chunks_collection_schema():
+    client = SpyClient()
+    store = QdrantStore(client=client, embeddings=object(), sparse=object())
+    spec = client.collections[store.chunks]
+    dense = spec["vectors_config"]["dense"]
+    assert dense.distance == models.Distance.COSINE
+    assert dense.size == settings.EMBEDDING_DIMENSIONS
+    assert spec["sparse_vectors_config"]["bm25"].modifier == models.Modifier.IDF
+    assert spec["hnsw_config"].m == 0
+    assert spec["hnsw_config"].payload_m == settings.QDRANT_HNSW_PAYLOAD_M
 
 
-def _one_doc():
-    from langchain_core.documents import Document
+def test_tenant_index_is_declared_first_and_is_tenant():
+    client = SpyClient()
+    store = QdrantStore(client=client, embeddings=object(), sparse=object())
+    for collection in (store.chunks, store.pages):
+        first = next(i for i in client.indexes if i[0] == collection)
+        assert first[1] == "tenant_id" and first[2].is_tenant is True
 
-    return [Document(page_content="revenue 2022", metadata={"source": "A.pdf"})]
+
+def test_existing_collection_with_other_dimension_is_refused(monkeypatch):
+    store = make_store()
+    monkeypatch.setattr(settings, "EMBEDDING_DIMENSIONS", 256)
+    try:
+        type(store)(client=store._client, embeddings=store._embeddings, sparse=store.sparse)
+    except RuntimeError as e:
+        assert "dimension" in str(e)
+    else:
+        raise AssertionError("une collection de dimension différente doit être refusée")

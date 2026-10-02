@@ -8,10 +8,8 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
-    "chromadb>=1.0.15",
     "django>=5.2.6",
     "django-cors-headers>=4.3.0",
-    "langchain-community>=0.3.28",
     "langchain-core>=0.3.75",
     "langchain-classic>=0.1.0",
     "langchain-mistralai>=0.2.11",
@@ -22,10 +20,12 @@ dependencies = [
     "mistralai>=1.9.9",
     "pydantic-settings>=2.0.0",
     "python-dotenv>=1.1.1",
-    "rank-bm25>=0.2.2",
     "pypdf (>=6.6.0,<7.0.0)",
+    "langchain-aws>=1.8.0",
+    "boto3>=1.43.107",
+    "qdrant-client>=1.19.1",
+    "fastembed>=0.8.1",
     "cohere>=5.20.2",
-    "langchain-anthropic>=1.0",
 ]
 
 [dependency-groups]

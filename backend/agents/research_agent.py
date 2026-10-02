@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class ResearchAgent:
     def __init__(self):
         """
-        Initialiser l'agent de recherche avec le modèle de raisonnement (Claude Sonnet 5).
+        Initialiser l'agent de recherche avec le modèle de raisonnement (Claude Sonnet 4.6 sur Bedrock).
         """
 
         logger.info(f"Initialisation de ResearchAgent avec {settings.REASONING_MODEL_ID}...")

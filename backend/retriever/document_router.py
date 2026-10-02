@@ -10,8 +10,8 @@ Deux composants :
 - DocumentRouter        : question + liste des sources -> sous-ensemble de sources (ou None = toutes).
                           D'abord un matching déterministe sur le nom des fichiers (gratuit), puis
                           un LLM léger seulement si nécessaire.
-- ScopedHybridRetriever : remplace l'EnsembleRetriever BM25 + vecteurs ; applique le périmètre
-                          courant (BM25 restreint au sous-ensemble, filtre metadata côté Chroma).
+- ScopedHybridRetriever : recherche hybride Qdrant (BM25 sparse + dense, RRF) dans l'espace du
+                          tenant ; applique le périmètre courant (filtre `source` côté Qdrant).
 - DocumentRouterRetriever : wrapper le plus externe ; route la question, pose le périmètre dans
                           une ContextVar, puis délègue à la chaîne habituelle.
 
@@ -25,8 +25,6 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Dict, List, Optional, Set
 
-from langchain_community.retrievers import BM25Retriever
-from langchain_classic.retrievers.ensemble import EnsembleRetriever
 from langchain_core.documents import Document
 
 from ..utils.logging import logger
@@ -139,51 +137,21 @@ class DocumentRouter:
 
 class ScopedHybridRetriever:
     """
-    BM25 + vecteurs (fusion RRF via EnsembleRetriever, comme avant), mais restreints au
-    périmètre courant : BM25 reconstruit sur le sous-ensemble (mis en cache, très rapide),
-    filtre `source` côté Chroma.
+    BM25 sparse + vecteurs denses, fusion RRF côté Qdrant, restreints à l'espace du tenant
+    et au périmètre courant (filtre `source` posé par DocumentRouterRetriever).
     """
 
-    def __init__(self, docs: List[Document], vector_store, weights, bm25_k: int, vector_k: int):
-        self.docs = docs
-        self.vector_store = vector_store
+    def __init__(self, tenant_store, weights, bm25_k: int, vector_k: int):
+        self.tenant_store = tenant_store
         self.weights = list(weights)
         self.bm25_k = bm25_k
         self.vector_k = vector_k
-        self._bm25_cache: Dict[str, BM25Retriever] = {}
-        self._ensemble_all = self._build_ensemble(None)
-
-    def _bm25_for(self, sources: Optional[List[str]]) -> BM25Retriever:
-        key = "|".join(sorted(sources)) if sources else "*"
-        if key not in self._bm25_cache:
-            subset = self.docs if not sources else [
-                d for d in self.docs if str(d.metadata.get("source")) in set(sources)
-            ]
-            if not subset:
-                subset = self.docs
-            bm25 = BM25Retriever.from_documents(subset)
-            bm25.k = self.bm25_k
-            self._bm25_cache[key] = bm25
-        return self._bm25_cache[key]
-
-    def _vector_for(self, sources: Optional[List[str]]):
-        search_kwargs = {"k": self.vector_k}
-        if sources:
-            search_kwargs["filter"] = (
-                {"source": sources[0]} if len(sources) == 1 else {"source": {"$in": sources}}
-            )
-        return self.vector_store.as_retriever(search_kwargs=search_kwargs)
-
-    def _build_ensemble(self, sources: Optional[List[str]]) -> EnsembleRetriever:
-        return EnsembleRetriever(
-            retrievers=[self._bm25_for(sources), self._vector_for(sources)],
-            weights=self.weights,
-        )
 
     def invoke(self, query: str) -> List[Document]:
-        sources = RETRIEVAL_SCOPE.get()
-        ensemble = self._ensemble_all if not sources else self._build_ensemble(sources)
-        return ensemble.invoke(query)
+        return self.tenant_store.hybrid_search(
+            query, bm25_k=self.bm25_k, vector_k=self.vector_k,
+            weights=self.weights, sources=RETRIEVAL_SCOPE.get(),
+        )
 
     def get_relevant_documents(self, query: str) -> List[Document]:
         return self.invoke(query)

@@ -4,7 +4,7 @@ Décompose les questions complexes en sous-questions pour améliorer le recall.
 """
 from typing import List, Set
 from langchain_core.documents import Document
-from langchain_mistralai import ChatMistralAI
+from ..llm.bedrock import large_llm
 from ..config.settings import settings
 from ..utils.logging import logger
 
@@ -48,12 +48,7 @@ class QueryDecompositionRetriever:
     def _get_llm(self):
         """Initialise le LLM si nécessaire."""
         if self.llm is None:
-            self.llm = ChatMistralAI(
-                model=settings.MODEL_ID,
-                api_key=settings.MISTRALAI_API_KEY,
-                temperature=0.3,
-                max_tokens=300,
-            )
+            self.llm = large_llm(max_tokens=300, temperature=0.3)
         return self.llm
 
     def _decompose_query(self, question: str) -> List[str]:

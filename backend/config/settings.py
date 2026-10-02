@@ -6,22 +6,29 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 load_dotenv()
 
 class Settings(BaseSettings):
-    # Paramètres requis
-    MISTRALAI_API_KEY: str = os.getenv("MISTRALAI_API_KEY")
-    MODEL_ID: str = "mistral-large-latest"  # HyDE, décomposition, compression, juge d'éval
-    MODEL_SMALL_ID: str = "mistral-small-latest"  # Sous-agents (classif, reformulation)
-    MODEL_OCR_ID: str = "mistral-ocr-latest"
-    EMBEDDING_MODEL_ID: str = "mistral-embed"
+    # Modèles : Amazon Bedrock (identifiants AWS par la chaîne standard de boto3 :
+    # variables AWS_*, ~/.aws/credentials ou rôle IAM). Profils d'inférence « eu. » :
+    # en eu-west-3, l'appel direct à l'ID du modèle est refusé pour Claude et Cohere Embed.
+    AWS_REGION: str = "eu-west-3"
+    MODEL_ID: str = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"  # HyDE, décomposition, compression
+    MODEL_SMALL_ID: str = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"  # Sous-agents (classif, reformulation)
+    EMBEDDING_MODEL_ID: str = "eu.cohere.embed-v4:0"
+    EMBEDDING_DIMENSIONS: int = 1024
 
-    # Raisonnement (génération avec outils + agent de recherche) : Claude Sonnet 5.
-    # Pas de `temperature` : Sonnet 5 la refuse (400). La réflexion adaptative est active
-    # par défaut, ses tokens comptent dans max_tokens : d'où un plafond large, la longueur
-    # de la réponse reste tenue par le prompt. Effort : low | medium | high | xhigh | max.
-    ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
-    REASONING_MODEL_ID: str = "claude-sonnet-5"
+    # Raisonnement (génération avec outils + agent de recherche) : Claude Sonnet 4.6 sur Bedrock.
+    # Réflexion adaptative : ses tokens comptent dans max_tokens, d'où un plafond large, la
+    # longueur de la réponse reste tenue par le prompt. Effort : low | medium | high | max
+    # (pas de xhigh sur Sonnet 4.6).
+    REASONING_MODEL_ID: str = "eu.anthropic.claude-sonnet-4-6"
     REASONING_EFFORT: str = "medium"
     REASONING_MAX_TOKENS: int = 8000
     REASONING_TIMEOUT: int = 90  # la réflexion allonge les appels, 30 s ne suffit pas
+
+    # OCR : Mistral OCR par son API (absent de Bedrock). Le juge de l'évaluation reste aussi
+    # sur Mistral Large, pour que les scores FinanceBench restent comparables aux runs passés.
+    MISTRALAI_API_KEY: Optional[str] = os.getenv("MISTRALAI_API_KEY")
+    MODEL_OCR_ID: str = "mistral-ocr-latest"
+    EVAL_JUDGE_MODEL_ID: str = "mistral-large-latest"
 
     # Timeouts et retries sur les appels LLM (évite les blocages de 2min)
     LLM_TIMEOUT: int = 30  # secondes par appel
@@ -32,19 +39,26 @@ class Settings(BaseSettings):
 
     # Paramètres optionnels avec valeurs par défaut
 
-    CHROMA_COLLECTION_NAME: str = "documents"
+    # Qdrant Cloud : une collection partagée, isolée par tenant_id (multi-tenancy Qdrant).
+    QDRANT_URL: Optional[str] = None  # None -> Qdrant en mémoire (tests, dev sans cluster)
+    QDRANT_API_KEY: Optional[str] = None
+    QDRANT_CHUNKS_COLLECTION: str = "chunks"
+    QDRANT_PAGES_COLLECTION: str = "pages"  # pages OCR (grep / read_page) + registre des documents
+    # HNSW : pas de graphe global (m=0), un graphe par tenant (payload_m) — chaque utilisateur
+    # a son index, et une recherche ne parcourt jamais les vecteurs des autres.
+    QDRANT_HNSW_PAYLOAD_M: int = 16
+    QDRANT_HNSW_EF_CONSTRUCT: int = 100
+    # Quotas par tenant : le cluster gratuit fait ~1 Go de RAM pour tous les utilisateurs.
+    TENANT_MAX_DOCUMENTS: int = 50
+    TENANT_MAX_CHUNKS: int = 20000
+    # Vecteur sparse BM25 (fastembed « Qdrant/bm25 ») : la langue fixe stemmer et stopwords.
+    BM25_LANGUAGE: str = "english"
 
-    # Métrique de similarité de l'index vectoriel (Chroma -> HNSW : "cosine" | "l2" | "ip").
-    # Posée explicitement à dessein : le défaut de Chroma est "l2", qui n'est correct que tant
-    # que les embeddings sont normés. C'est le cas de mistral-embed (normes mesurées sur
-    # l'index FinanceBench : 1 ± 2e-4), et sur des vecteurs unitaires L2 = 2 - 2·cos donne
-    # exactement le même classement — vérifié sur 25 requêtes, top-20 identique.
-    # Un modèle d'embedding non normé rendrait ce défaut faux SILENCIEUSEMENT : pas d'erreur,
-    # pas de log, juste un recall qui baisse. D'où le réglage explicite.
-    # ⚠️ Changer cette valeur invalide les index HNSW déjà persistés : il faut ré-embedder.
+    # Métrique de similarité de l'index vectoriel. Cohere Embed v4 n'est pas garanti normé :
+    # cosinus explicite. ⚠️ La changer impose de recréer la collection et de ré-embedder.
     VECTOR_SPACE: str = "cosine"
 
-    # Cohere API (pour reranking)
+    # Rerank : Cohere Rerank 4 Pro, par l'API Cohere (pas Bedrock, qui ne propose que la 3.5).
     COHERE_API_KEY: Optional[str] = None
 
     # Paramètres d'embeddings
@@ -55,7 +69,7 @@ class Settings(BaseSettings):
     HYBRID_RETRIEVER_WEIGHTS: tuple = (0.5, 0.5)  # Équilibré — BM25 crucial pour termes exacts
     RERANK_ENABLED: bool = True
     RERANK_TOP_K: int = 30  # Top N résultats après reranking de TOUS les candidats
-    RERANK_MODEL: str = "rerank-v4.0-pro"  # Cohere Rerank 4 Pro (gratuit en trial)
+    RERANK_MODEL: str = "rerank-v4.0-pro"
 
     # Multi-Query - 1 reformulation (compromis latence/recall pour la prod)
     MULTI_QUERY_ENABLED: bool = True
