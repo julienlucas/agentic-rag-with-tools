@@ -30,7 +30,6 @@ from evaluation.utils import call_with_backoff
 HERE = Path(__file__).resolve().parent
 PDF_DIR = HERE / "pdfs"
 CACHE_DIR = HERE / "cache"
-CHROMA_DIR = HERE / "chroma"
 
 GITHUB_RAW = "https://raw.githubusercontent.com/patronus-ai/financebench/main"
 QUESTIONS_URL = f"{GITHUB_RAW}/data/financebench_open_source.jsonl"
@@ -80,16 +79,15 @@ def _log(msg: str):
     print(f"[prepare] {msg}", flush=True)
 
 
-def store_dir_for(docs: List[str]) -> Path:
+def eval_tenant_for(docs: List[str]) -> str:
     """
-    Répertoire Chroma dédié à un jeu de documents précis.
+    Espace Qdrant dédié à un jeu de documents précis.
 
-    Indispensable : si on réutilisait une collection unique, un run lancé avec --docs sur un
-    sous-ensemble verrait BM25 restreint au sous-ensemble mais la recherche vectorielle
-    répondre depuis tous les documents indexés précédemment.
+    Indispensable : si on réutilisait un espace unique, un run lancé avec --docs sur un
+    sous-ensemble chercherait aussi dans tous les documents indexés précédemment.
     """
     key = hashlib.sha256(",".join(sorted(docs)).encode()).hexdigest()[:12]
-    return CHROMA_DIR / f"docs-{key}"
+    return f"financebench-{key}"
 
 
 def load_cached_chunks(docs: List[str]) -> List:
@@ -420,51 +418,16 @@ def write_dataset(rows: List[Dict], path: Path):
 
 def build_vector_store(chunks: List, docs: List[str], force: bool = False):
     """
-    Construit (et persiste) la collection Chroma pour éviter de ré-embedder à chaque run.
-    ~5000 children sur 3 documents : plusieurs dizaines de secondes d'embeddings Mistral.
+    Indexe les chunks dans l'espace Qdrant du jeu de documents, pour ne pas ré-embedder
+    à chaque run (idempotent : un document déjà indexé à l'identique est sauté).
     """
-    from langchain_community.vectorstores import Chroma
-    from backend.retriever.embeddings import get_embeddings
+    from evaluation.utils import index_chunks
 
-    store_dir = store_dir_for(docs)
-    if force and store_dir.exists():
-        import shutil
-        shutil.rmtree(store_dir)
-
-    store_dir.mkdir(parents=True, exist_ok=True)
-    embeddings = get_embeddings()
-    store = Chroma(
-        persist_directory=str(store_dir),
-        embedding_function=embeddings,
-        collection_name=settings.CHROMA_COLLECTION_NAME,
-        collection_metadata={"hnsw:space": settings.VECTOR_SPACE},
-    )
-    existing = store._collection.count()
-    if existing >= len(chunks) and not force:
-        _log(f"Collection Chroma déjà peuplée ({existing} vecteurs), on la réutilise")
-        return store
-
-    if existing > 0:
-        # Indexation précédente interrompue : repartir de zéro plutôt que créer des doublons.
-        _log(f"Collection incomplète ({existing}/{len(chunks)}), reconstruction complète")
-        store.delete_collection()
-        store = Chroma(
-            persist_directory=str(store_dir),
-            embedding_function=embeddings,
-            collection_name=settings.CHROMA_COLLECTION_NAME,
-            collection_metadata={"hnsw:space": settings.VECTOR_SPACE},
-        )
-        existing = 0
-
-    _log(f"Embedding de {len(chunks)} chunks (collection actuelle: {existing})...")
+    tenant_id = eval_tenant_for(docs)
+    _log(f"Indexation Qdrant de {len(chunks)} chunks dans l'espace {tenant_id}...")
     start = time.time()
-    BATCH = 128
-    for i in range(0, len(chunks), BATCH):
-        batch = chunks[i:i + BATCH]
-        store.add_documents(batch)
-        _log(f"  {min(i + BATCH, len(chunks))}/{len(chunks)} chunks embeddés")
-    _log(f"Collection Chroma construite en {time.time() - start:.0f}s")
-    return store
+    tenant = index_chunks(tenant_id, chunks, load_cached_pages(docs), force=force)
+    _log(f"Espace {tenant_id}: {tenant.chunk_count()} chunks, prêt en {time.time() - start:.0f}s")
 
 
 def main():
@@ -474,7 +437,7 @@ def main():
                              f"(tous les documents à {EXTENDED_MIN_QUESTIONS}+ questions : 18 documents, 70 questions)")
     parser.add_argument("--force", action="store_true", help="Ignore les caches et tout reconstruit")
     parser.add_argument("--skip-embeddings", action="store_true",
-                        help="N'construit pas la collection Chroma (elle sera bâtie au 1er run)")
+                        help="N'indexe pas dans Qdrant (l'espace sera rempli au 1er run)")
     parser.add_argument("--ocr-batch", type=int, default=50,
                         help="Pages par appel OCR. Baisser (ex. 20) si rate limits répétés")
     parser.add_argument("--ocr-delay", type=float, default=2.0,

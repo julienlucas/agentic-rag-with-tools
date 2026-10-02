@@ -111,7 +111,7 @@ class FinanceBenchJudge:
 
     def __init__(self, llm=None, model: Optional[str] = None):
         self.llm = llm
-        self.model = model or settings.MODEL_ID
+        self.model = model or settings.EVAL_JUDGE_MODEL_ID
 
     def _get_llm(self):
         if self.llm is None:

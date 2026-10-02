@@ -70,7 +70,7 @@ class AnswerRelevancy:
     def _get_llm(self):
         if self.llm is None:
             self.llm = ChatMistralAI(
-                model=settings.MODEL_SMALL_ID,
+                model="mistral-small-latest",  # métrique d'éval : reste sur Mistral, comme le juge
                 api_key=settings.MISTRALAI_API_KEY,
                 temperature=0,
                 max_tokens=300,

@@ -34,10 +34,11 @@ from backend.agents.research_agent import ResearchAgent
 from backend.config.settings import settings
 from backend.agents.workflow import AgentState, AgentWorkflow, effective_top_k
 from backend.retriever.page_store import PageStore
-from evaluation.financebench.prepare import load_cached_chunks, load_cached_pages, store_dir_for
+from evaluation.financebench.prepare import eval_tenant_for, load_cached_chunks, load_cached_pages
 from evaluation.answer_relevancy import AnswerRelevancy
 from evaluation.llm_judge import FinanceBenchJudge, aggregate_financebench_verdicts
 from evaluation.financebench.cost import compute_cost, format_cost
+from evaluation.financebench.langsmith_sync import push_eval
 from evaluation.metrics import (
     _context_hits,
     _doc_relevance_flags,
@@ -583,22 +584,22 @@ def main():
     start = time.time()
 
     # --- Index -------------------------------------------------------------
-    # Le jeu de documents indexé doit correspondre exactement au répertoire Chroma,
-    # sinon BM25 et la recherche vectorielle porteraient sur des corpus différents.
+    # Le jeu de documents indexé doit correspondre exactement à l'espace Qdrant du run,
+    # sinon la recherche porterait aussi sur des documents hors du jeu évalué.
     if args.per_doc:
         retrievers = {}
         for doc_name in docs_in_dataset:
             chunks = load_cached_chunks([doc_name])
             _log(f"Index {doc_name}: {len(chunks)} chunks")
             retrievers[doc_name] = build_retriever_from_chunks(
-                chunks, persist_directory=str(store_dir_for([doc_name]))
+                chunks, eval_tenant_for([doc_name]), load_cached_pages([doc_name])
             )
         get_retriever = lambda ex: retrievers[ex["doc_name"]]
     else:
         chunks = load_cached_chunks(docs_in_dataset)
         _log(f"Index combiné: {len(chunks)} chunks (recherche sur les {len(docs_in_dataset)} documents)")
         retriever = build_retriever_from_chunks(
-            chunks, persist_directory=str(store_dir_for(docs_in_dataset))
+            chunks, eval_tenant_for(docs_in_dataset), load_cached_pages(docs_in_dataset)
         )
         get_retriever = lambda ex: retriever
 
@@ -721,6 +722,8 @@ def main():
         summary=summary,
         inputs={"dataset": args.dataset, "mode": args.mode, "documents": docs_in_dataset},
     )
+    # Dataset + une expérience par mode, question par question (comparables dans LangSmith).
+    push_eval(args.dataset, summary, per_example)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
+import hashlib
 import json
 import os
 import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -61,15 +62,43 @@ def log_to_langsmith(name: str, summary: Dict, inputs: Dict):
         return None
 
 
-def build_retriever_from_chunks(chunks: List, persist_directory: str = None):
+def index_chunks(tenant_id: str, chunks: List, pages_by_doc: Optional[Dict[str, List[str]]] = None,
+                 force: bool = False):
+    """
+    Indexe des chunks déjà produits dans l'espace Qdrant `tenant_id`, document par document.
+    Idempotent : un document dont les chunks n'ont pas changé n'est pas ré-embeddé.
+    Retourne le TenantStore.
+    """
+    from backend.vectorstore import get_store
+
+    tenant = get_store().for_tenant(tenant_id)
+    by_source: Dict[str, List] = {}
+    for chunk in chunks:
+        by_source.setdefault(str(chunk.metadata.get("source")), []).append(chunk)
+    for source, doc_chunks in by_source.items():
+        digest = hashlib.sha256(source.encode())
+        for chunk in doc_chunks:
+            digest.update(chunk.page_content.encode())
+        file_hash = digest.hexdigest()
+        if tenant.has_document(file_hash) and not force:
+            continue
+        pages = (pages_by_doc or {}).get(source, [])
+        tenant.add_document(file_hash, source, doc_chunks, pages, enforce_quota=False)
+    return tenant
+
+
+def build_retriever_from_chunks(chunks: List, tenant_id: str,
+                                pages_by_doc: Optional[Dict[str, List[str]]] = None):
     """
     Construit le retriever à partir de chunks déjà produits, sans repasser par l'OCR.
 
     L'évaluation FinanceBench pré-calcule ses chunks (OCR page par page + metadata de page)
-    dans une phase séparée, et réutilise ici exactement la même chaîne de retrieval que
-    la production : BM25 + Chroma -> ParentChild -> MultiQuery -> Rerank Cohere.
+    dans une phase séparée, les indexe dans un espace Qdrant dédié au jeu de documents, et
+    réutilise ici exactement la même chaîne de retrieval que la production :
+    Qdrant (BM25 sparse + dense) -> ParentChild -> MultiQuery -> Rerank Bedrock.
     """
-    return RetrieverBuilder().build_hybrid_retriever(chunks, persist_directory=persist_directory)
+    tenant = index_chunks(tenant_id, chunks, pages_by_doc)
+    return RetrieverBuilder().build_hybrid_retriever(tenant)
 
 
 # Résilience aux rate limits : implémentation côté backend (utilisée aussi par le

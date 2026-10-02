@@ -173,12 +173,12 @@ def _invalid(problems: List[str]) -> int:
 
 def _load_index(dataset: List[Dict]):
     from backend.retriever.page_store import PageStore
-    from evaluation.financebench.prepare import load_cached_chunks, load_cached_pages, store_dir_for
+    from evaluation.financebench.prepare import eval_tenant_for, load_cached_chunks, load_cached_pages
     from evaluation.utils import build_retriever_from_chunks
 
     docs = sorted({ex["doc_name"] for ex in dataset})
     chunks = load_cached_chunks(docs)
-    retriever = build_retriever_from_chunks(chunks, persist_directory=str(store_dir_for(docs)))
+    retriever = build_retriever_from_chunks(chunks, eval_tenant_for(docs), load_cached_pages(docs))
     return DegradationWatch(retriever), PageStore(load_cached_pages(docs)), docs
 
 
