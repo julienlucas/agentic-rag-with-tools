@@ -4,7 +4,7 @@ Décompose les questions complexes en sous-questions pour améliorer le recall.
 """
 from typing import List, Set
 from langchain_core.documents import Document
-from ..llm.bedrock import large_llm
+from ..llm.models import large_llm
 from ..config.settings import settings
 from ..utils.logging import logger
 

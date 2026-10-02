@@ -47,13 +47,17 @@ Chaque passage ramené par un outil reçoit un numéro `[n]`, affiché dans le r
 - **Reranking Cohere + parent-child + multi-query** : petits chunks pour matcher, gros chunks pour répondre.
 
 ## Stack de modèles
-Les modèles passent par **Amazon Bedrock** (région `eu-west-3`), sauf l'OCR et le reranker :
-- ⚡ Mistral OCR (API Mistral, absent de Bedrock)
-- 🧠 Cohere Embed v4 (embeddings, 1024 dimensions)
-- 🧠 Cohere Rerank 4 Pro (API Cohere)
+Claude et les embeddings passent, au choix (`MODEL_PROVIDER`), par **Amazon Bedrock** (région
+`eu-west-3`, par défaut) ou directement par les **API Anthropic et Cohere**. Les mêmes modèles
+dans les deux cas :
 - 💎 Claude Sonnet 4.6 (recherche à outils + génération) + Claude Haiku 4.5 (sous-agents : pertinence, routage, multi-query)
+- 🧠 Cohere Embed v4 (embeddings, 1024 dimensions) — identique des deux côtés : changer de fournisseur ne demande pas de réindexer
+
+Toujours par leur propre API :
+- ⚡ Mistral OCR (absent de Bedrock)
+- 🧠 Cohere Rerank 4 Pro
 - ⚖️ Mistral Large (juge LLM de l'évaluation, inchangé pour garder les scores comparables)
-- 🗄️ Qdrant Cloud (base vectorielle, HNSW par utilisateur)
+- 🗄️ Qdrant Cloud (base vectorielle, un espace et un HNSW par utilisateur)
 
 ## Installation
 
@@ -68,20 +72,57 @@ uv sync
 ```
 
 3. **Configuration** :
-- **AWS** : identifiants avec `bedrock:InvokeModel` et accès activé dans la console Bedrock à Claude Sonnet 4.6, Claude Haiku 4.5 et Cohere Embed v4. Les identifiants sont lus par la chaîne standard de boto3 (`~/.aws/credentials`, variables `AWS_*` ou rôle IAM).
-- **Qdrant** : un cluster sur [cloud.qdrant.io](https://cloud.qdrant.io) (AWS, région proche d'eu-west-3). Sans `QDRANT_URL`, Qdrant tourne en mémoire (données perdues au redémarrage).
+
+Choisissez d'abord le fournisseur des modèles Claude et des embeddings :
+
+| `MODEL_PROVIDER` | Claude (Sonnet 4.6, Haiku 4.5) | Embeddings (Cohere Embed v4) | Prérequis |
+|---|---|---|---|
+| `bedrock` (défaut) | Amazon Bedrock | Amazon Bedrock | Compte AWS avec `bedrock:InvokeModel`, accès activé dans la console Bedrock à Claude Sonnet 4.6, Claude Haiku 4.5 et Cohere Embed v4 |
+| `direct` | API Anthropic | API Cohere | Clé [platform.claude.com](https://platform.claude.com) |
+
+Dans tous les cas :
 - **Mistral** : une clé sur [console.mistral.ai](https://console.mistral.ai), pour l'OCR.
-- **Cohere** : une clé sur [dashboard.cohere.com](https://dashboard.cohere.com), pour le reranker.
+- **Cohere** : une clé sur [dashboard.cohere.com](https://dashboard.cohere.com), pour le reranker (et les embeddings en mode `direct`).
+- **Qdrant** : un cluster sur [cloud.qdrant.io](https://cloud.qdrant.io) (AWS, région proche d'eu-west-3). Sans `QDRANT_URL`, Qdrant tourne en mémoire (données perdues au redémarrage).
 
 Fichier `.env` :
 ```bash
-MISTRALAI_API_KEY=votre_clé_api_mistral_ici
-COHERE_API_KEY=votre_clé_api_cohere_ici
+# --- Fournisseur des modèles : bedrock (défaut) ou direct ---
+MODEL_PROVIDER=bedrock
+
+# --- Toujours requis ---
+MISTRALAI_API_KEY=votre_clé_api_mistral_ici      # OCR
+COHERE_API_KEY=votre_clé_api_cohere_ici          # reranker (+ embeddings en mode direct)
 QDRANT_URL=https://xxxx.eu-central-1-0.aws.cloud.qdrant.io:6333
 QDRANT_API_KEY=votre_clé_qdrant_ici
-# Si pas de ~/.aws/credentials (ex. en déploiement) :
+
+# --- MODEL_PROVIDER=bedrock ---
+# Facultatif si ~/.aws/credentials ou un rôle IAM suffit. Présentes ici, ces clés passent
+# AVANT les variables AWS du shell (un AWS_SESSION_TOKEN expiré dans le terminal ne gêne plus).
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=eu-west-3
+
+# --- MODEL_PROVIDER=direct ---
+ANTHROPIC_API_KEY=votre_clé_api_anthropic_ici
+```
+
+Réglages facultatifs (valeurs par défaut) :
+```bash
+# Identifiants de modèles : vides = défaut du fournisseur choisi.
+#   bedrock : eu.anthropic.claude-sonnet-4-6, eu.anthropic.claude-haiku-4-5-20251001-v1:0, eu.cohere.embed-v4:0
+#   direct  : claude-sonnet-4-6, claude-haiku-4-5, embed-v4.0
+REASONING_MODEL_ID=
+MODEL_SMALL_ID=
+MODEL_ID=
+EMBEDDING_MODEL_ID=
+REASONING_EFFORT=medium          # low | medium | high | max
+RERANK_MODEL=rerank-v4.0-pro
+BM25_LANGUAGE=english            # langue du stemmer BM25 (réindexer si on la change)
+TENANT_MAX_DOCUMENTS=50          # quotas par espace utilisateur
+TENANT_MAX_CHUNKS=20000
+QDRANT_CHUNKS_COLLECTION=chunks  # collections créées automatiquement au premier démarrage
+QDRANT_PAGES_COLLECTION=pages
 ```
 
 Pour surveiller votre application avec LangSmith (si vous le souhaitez) :

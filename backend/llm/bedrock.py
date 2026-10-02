@@ -1,5 +1,6 @@
 """
-Accès aux modèles via Amazon Bedrock : le seul module qui construit des clients de modèles.
+Accès aux modèles via Amazon Bedrock (MODEL_PROVIDER=bedrock). Même interface que direct.py ;
+le choix se fait dans models.py.
 
 - Chat (Claude) : API Converse via ChatBedrockConverse. Les identifiants sont des profils
   d'inférence régionaux (« eu.anthropic... ») : en eu-west-3, Haiku 4.5 et Sonnet refusent
@@ -78,14 +79,6 @@ def chat_model(model_id: str, max_tokens: int, temperature: float = 0.0) -> Chat
     )
 
 
-def small_llm(max_tokens: int, temperature: float = 0.0) -> ChatBedrockConverse:
-    return chat_model(settings.MODEL_SMALL_ID, max_tokens, temperature)
-
-
-def large_llm(max_tokens: int, temperature: float = 0.0) -> ChatBedrockConverse:
-    return chat_model(settings.MODEL_ID, max_tokens, temperature)
-
-
 def reasoning_llm() -> ChatBedrockConverse:
     """
     Modèle de raisonnement (génération avec outils + agent de recherche).
@@ -134,3 +127,7 @@ class BedrockCohereEmbeddings(Embeddings):
 
     def embed_query(self, text: str) -> List[float]:
         return self._embed([text], "search_query")[0]
+
+
+def embeddings() -> Embeddings:
+    return BedrockCohereEmbeddings()

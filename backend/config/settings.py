@@ -1,25 +1,49 @@
 import os
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Literal, Optional
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
+# Modèles par défaut de chaque fournisseur (mêmes modèles, identifiants différents).
+PROVIDER_DEFAULTS = {
+    "bedrock": {
+        "MODEL_ID": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "MODEL_SMALL_ID": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "REASONING_MODEL_ID": "eu.anthropic.claude-sonnet-4-6",
+        "EMBEDDING_MODEL_ID": "eu.cohere.embed-v4:0",
+    },
+    "direct": {
+        "MODEL_ID": "claude-haiku-4-5",
+        "MODEL_SMALL_ID": "claude-haiku-4-5",
+        "REASONING_MODEL_ID": "claude-sonnet-4-6",
+        "EMBEDDING_MODEL_ID": "embed-v4.0",
+    },
+}
+
 class Settings(BaseSettings):
-    # Modèles : Amazon Bedrock (identifiants AWS par la chaîne standard de boto3 :
-    # variables AWS_*, ~/.aws/credentials ou rôle IAM). Profils d'inférence « eu. » :
-    # en eu-west-3, l'appel direct à l'ID du modèle est refusé pour Claude et Cohere Embed.
+    # Fournisseur des modèles Claude et des embeddings :
+    #  - "bedrock" : Amazon Bedrock (identifiants AWS du .env, sinon chaîne standard de boto3).
+    #    Profils d'inférence « eu. » : en eu-west-3, l'appel direct à l'ID du modèle est refusé.
+    #  - "direct"  : API Anthropic (ANTHROPIC_API_KEY) et API Cohere (COHERE_API_KEY).
+    # Les embeddings sont le même modèle des deux côtés (Cohere Embed v4, 1024 dimensions) :
+    # changer de fournisseur ne demande pas de réindexer Qdrant.
+    MODEL_PROVIDER: Literal["bedrock", "direct"] = "bedrock"
     AWS_REGION: str = "eu-west-3"
-    MODEL_ID: str = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"  # HyDE, décomposition, compression
-    MODEL_SMALL_ID: str = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"  # Sous-agents (classif, reformulation)
-    EMBEDDING_MODEL_ID: str = "eu.cohere.embed-v4:0"
+    ANTHROPIC_API_KEY: Optional[str] = None
+
+    # Identifiants de modèles : vides = défaut du fournisseur (PROVIDER_DEFAULTS ci-dessous).
+    MODEL_ID: Optional[str] = None  # HyDE, décomposition, compression
+    MODEL_SMALL_ID: Optional[str] = None  # Sous-agents (classif, reformulation)
+    EMBEDDING_MODEL_ID: Optional[str] = None
     EMBEDDING_DIMENSIONS: int = 1024
 
-    # Raisonnement (génération avec outils + agent de recherche) : Claude Sonnet 4.6 sur Bedrock.
+    # Raisonnement (génération avec outils + agent de recherche) : Claude Sonnet 4.6.
     # Réflexion adaptative : ses tokens comptent dans max_tokens, d'où un plafond large, la
     # longueur de la réponse reste tenue par le prompt. Effort : low | medium | high | max
     # (pas de xhigh sur Sonnet 4.6).
-    REASONING_MODEL_ID: str = "eu.anthropic.claude-sonnet-4-6"
+    REASONING_MODEL_ID: Optional[str] = None
     REASONING_EFFORT: str = "medium"
     REASONING_MAX_TOKENS: int = 8000
     REASONING_TIMEOUT: int = 90  # la réflexion allonge les appels, 30 s ne suffit pas
@@ -158,5 +182,12 @@ class Settings(BaseSettings):
     EXAMPLES_DIR: str = "./static"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @model_validator(mode="after")
+    def _provider_defaults(self):
+        for field, value in PROVIDER_DEFAULTS[self.MODEL_PROVIDER].items():
+            if not getattr(self, field):
+                setattr(self, field, value)
+        return self
 
 settings = Settings()

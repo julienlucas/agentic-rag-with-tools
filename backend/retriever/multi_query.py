@@ -5,7 +5,7 @@ Génère plusieurs reformulations de la question pour améliorer le recall.
 import hashlib
 from typing import List, Set
 from langchain_core.documents import Document
-from ..llm.bedrock import small_llm
+from ..llm.models import small_llm
 from ..config.settings import settings
 from ..utils.logging import logger
 

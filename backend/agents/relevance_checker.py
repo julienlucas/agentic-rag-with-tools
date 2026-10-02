@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 
-from ..llm.bedrock import small_llm
+from ..llm.models import small_llm
 from ..config.settings import settings
 import logging
 

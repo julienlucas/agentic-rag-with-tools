@@ -15,7 +15,7 @@ import re
 from typing import Dict, List, Optional
 
 from langchain_core.documents import Document
-from ..llm.bedrock import small_llm
+from ..llm.models import small_llm
 
 from ..config.settings import settings
 from ..utils.logging import logger

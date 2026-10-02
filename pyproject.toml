@@ -26,6 +26,7 @@ dependencies = [
     "qdrant-client>=1.19.1",
     "fastembed>=0.8.1",
     "cohere>=5.20.2",
+    "langchain-anthropic>=1.0",
 ]
 
 [dependency-groups]

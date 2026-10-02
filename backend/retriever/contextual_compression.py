@@ -5,7 +5,7 @@ Améliore la précision en filtrant le contenu non pertinent.
 """
 from typing import List
 from langchain_core.documents import Document
-from ..llm.bedrock import large_llm
+from ..llm.models import large_llm
 from ..config.settings import settings
 from ..utils.logging import logger
 

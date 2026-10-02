@@ -1,6 +1,6 @@
 import threading
 from ..config.settings import settings
-from ..llm.bedrock import small_llm
+from ..llm.models import small_llm
 from ..utils.logging import logger
 from .embeddings import get_embeddings
 from .parent_child_retriever import ParentChildRetriever
