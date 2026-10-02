@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Calendar, Mail, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { scrollToHash } from "@/lib/use-lenis";
 
 export function ContactWidget() {
   const [open, setOpen] = useState(false);
 
   const goToContact = () => {
-    document.getElementById("contact")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const target = document.getElementById("contact");
+    if (target) scrollToHash("#contact");
+    else window.location.href = "/a-propos#contact";
     setOpen(false);
   };
 

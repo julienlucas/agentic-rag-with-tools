@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 /*
  * Boutons « Papier & Signal ».
  *
- * Angle quasi vif (rounded-sm = 2px), filet de 1px sur toutes les variantes — y compris
+ * Angle légèrement adouci (rounded-sm = 4px), filet de 1px sur toutes les variantes — y compris
  * les aplats — pour que pleins et contours s'alignent au pixel près quand ils sont côte
  * à côte. Pas d'ombre : la hiérarchie passe par la valeur, pas par l'élévation.
  * Sur le primaire, le hover ne fonce pas l'encre, il y infuse 14 % d'or.
@@ -30,12 +30,17 @@ const buttonVariants = cva(
         default:
           "bg-ink text-on-ink border-ink hover:bg-[color-mix(in_srgb,var(--ink)_86%,var(--signal))] hover:border-[color-mix(in_srgb,var(--ink)_86%,var(--signal))]",
         brand:
-          "bg-brand text-on-ink border-brand hover:bg-brand-strong hover:border-brand-strong",
+          "bg-brand text-on-brand border-brand hover:bg-brand-strong hover:border-brand-strong",
         ink: "bg-ink text-on-ink border-ink hover:bg-ink-soft hover:border-ink-soft",
         destructive:
           "bg-destructive text-destructive-foreground border-destructive hover:bg-[color-mix(in_srgb,var(--destructive)_88%,black)]",
+        // Contour accent : bordure et texte de la même teinte ; au survol, la bordure se fond
+        // dans un fond accent pâle.
         outline:
-          "border-hairline-strong bg-transparent text-ink hover:border-ink hover:bg-paper-2/60",
+          "border-brand bg-transparent text-brand hover:border-transparent hover:bg-brand-surface",
+        // Pastille (questions suggérées, actions secondaires du chat) : neutre au repos, accent au survol.
+        pill:
+          "mono-xs max-w-full rounded-full border-hairline font-normal leading-normal text-muted-foreground hover:border-brand hover:text-brand-deep disabled:opacity-40",
         onInk:
           "border-white/25 bg-transparent text-on-ink hover:border-white/70 hover:bg-white/8",
         secondary:
@@ -49,6 +54,7 @@ const buttonVariants = cva(
         sm: "min-h-9 px-3.5 py-2 text-[0.8125rem]",
         lg: "min-h-12 px-6 py-3.5 text-[0.9375rem]",
         icon: "size-9 p-0",
+        pill: "min-h-0 px-2.5 py-1",
       },
     },
     defaultVariants: {

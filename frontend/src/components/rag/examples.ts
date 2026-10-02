@@ -1,3 +1,5 @@
+import type { Citation } from "@/api";
+
 export type Evidence = { src: string; caption: string };
 
 export type ExampleQuestion = {
@@ -74,7 +76,11 @@ export const exampleDocs: ExampleDoc[] = [
 export const SUPPORTED_EXTENSIONS = [".pdf", ".docx", ".txt", ".md"];
 export const MAX_FILE_MB = 50;
 
-/** Sortie réelle obtenue sur le document DeepSeek pré-chargé — affichée comme exemple tant qu'aucune question n'est posée. */
+/**
+ * Sortie obtenue sur le document DeepSeek pré-chargé — affichée comme exemple tant qu'aucune
+ * question n'est posée. Les citations [n] reprennent le format renvoyé par l'API ; leurs extraits
+ * sont copiés du PDF (Table 4 p. 13 et commentaire p. 14).
+ */
 export const exampleOutput = {
   docId: "deepseek-r1",
   question:
@@ -83,19 +89,45 @@ export const exampleOutput = {
   answer: `Voici l'évaluation des performances du modèle **DeepSeek-R1** par rapport à **OpenAI o1-mini** sur les tâches de codage, **exclusivement** d'après le contexte fourni :
 
 ### 1. Tâches de codage algorithmique
-- **LiveCodeBench (Pass@1-COT)** : DeepSeek-R1 **65.9%** vs OpenAI o1-mini **53.8%** → DeepSeek-R1 surpasse o1-mini de **12.1 points**.
-- **Codeforces (Percentile)** : DeepSeek-R1 **96.3%** vs o1-mini **93.4%** → légèrement supérieur (+2.9 points).
-- **Codeforces (Rating)** : DeepSeek-R1 **2029** vs o1-mini **1820** → +**209 points**.
+- **LiveCodeBench (Pass@1-COT)** : DeepSeek-R1 **65.9%** vs OpenAI o1-mini **53.8%** → DeepSeek-R1 surpasse o1-mini de **12.1 points** [1].
+- **Codeforces (Percentile)** : DeepSeek-R1 **96.3%** vs o1-mini **93.4%** → légèrement supérieur (+2.9 points) [1].
+- **Codeforces (Rating)** : DeepSeek-R1 **2029** vs o1-mini **1820** → +**209 points** [1].
 
 ### 2. Tâches de codage orientées ingénierie
-- **SWE Verified (Resolved)** : DeepSeek-R1 **49.2%** vs o1-mini **41.6%** → +7.6 points.
-- **Aider-Polyglot (Accuracy)** : DeepSeek-R1 **53.3%** vs o1-mini **32.9%** → +20.4 points.
+- **SWE Verified (Resolved)** : DeepSeek-R1 **49.2%** vs o1-mini **41.6%** → +7.6 points [2].
+- **Aider-Polyglot (Accuracy)** : DeepSeek-R1 **53.3%** vs o1-mini **32.9%** → +20.4 points [2].
 
 ### 3. Comparaison avec OpenAI o1-1217 (mentionné dans le contexte)
-- Le contexte indique que **OpenAI o1-1217** est globalement supérieur à DeepSeek-R1 sur les tâches d'ingénierie (ex. Aider-Polyglot), mais que les performances sont **comparables** sur SWE Verified.`,
+- Le contexte indique que **OpenAI o1-1217** est globalement supérieur à DeepSeek-R1 sur les tâches d'ingénierie (ex. Aider-Polyglot), mais que les performances sont **comparables** sur SWE Verified [3].`,
   report: `**Pertinent:** Oui
 **Pertinence des passages:** CAN_ANSWER — les passages récupérés permettent de répondre à la question
 **Confiance retrieval (reranker):** 0.95 — élevée
 **Recherche corrective:** non nécessaire
 **Sources utilisées:** DeepSeek Technical Report — 10 passages transmis au modèle`,
+  citations: [
+    {
+      n: 1,
+      source: "DeepSeek Technical Report.pdf",
+      page: 12,
+      locator: "DeepSeek Technical Report, p. 13",
+      excerpt:
+        "Table 4 · Code — LiveCodeBench (Pass@1-COT) : o1-mini 53.8, DeepSeek-R1 65.9 · Codeforces (Percentile) : 93.4, 96.3 · Codeforces (Rating) : 1820, 2029",
+    },
+    {
+      n: 2,
+      source: "DeepSeek Technical Report.pdf",
+      page: 12,
+      locator: "DeepSeek Technical Report, p. 13",
+      excerpt:
+        "Table 4 · Code — SWE Verified (Resolved) : o1-mini 41.6, DeepSeek-R1 49.2 · Aider-Polyglot (Acc.) : o1-mini 32.9, DeepSeek-R1 53.3",
+    },
+    {
+      n: 3,
+      source: "DeepSeek Technical Report.pdf",
+      page: 13,
+      locator: "DeepSeek Technical Report, p. 14",
+      excerpt:
+        "On engineering-oriented coding tasks, OpenAI-o1-1217 outperforms DeepSeek-R1 on Aider but achieves comparable performance on SWE Verified.",
+    },
+  ] satisfies Citation[],
 };

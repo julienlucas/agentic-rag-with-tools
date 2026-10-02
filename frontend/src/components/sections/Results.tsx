@@ -422,14 +422,14 @@ export function Results() {
           >
             {/* Le numéro reste calé en haut à droite, même quand le libellé passe sur plusieurs lignes. */}
             <div className="flex items-start justify-between gap-3">
-              <span className="eyebrow min-h-[3lh] min-w-0">{l.label}</span>
-              <span className="mono-xs shrink-0 leading-none text-ink-faint">0{i + 1}</span>
+              <span className="eyebrow min-h-[3lh] min-w-0 text-brand">{l.label}</span>
+              <span className="mono-xs shrink-0 leading-none text-brand">0{i + 1}</span>
             </div>
             <div className="font-display mt-4 text-5xl font-normal tracking-tight whitespace-nowrap">
               {l.correct}
             </div>
             <div className="mt-1 text-sm font-medium">réponses correctes</div>
-            <div className="mono-xs mt-1 text-muted-foreground">{l.wrong}</div>
+            <div className="meta mt-1">{l.wrong}</div>
             <p className="mt-4 border-t border-hairline pt-3 text-xs leading-relaxed text-ink-muted">
               {l.setup}
             </p>
@@ -460,8 +460,8 @@ export function Results() {
             <span className="accent-italic">
               à ~19 % sur le benchmark complet
             </span>
-            . Sans outils, le même système n'en répond que 20 sur 26 : les outils font gagner 19 points. Mistral Agentic Search (Mistral Medium 3.5)
-            annonce 86 % sur{" "}
+            . Sans outils, le même système n'en répond que 20 sur 26 : les outils font gagner 19 points. Mistral avec son outil API Agentic Search (Mistral Medium 3.5)
+            annonce eux 86 % sur{" "}
             <strong className="font-semibold text-ink">150 questions</strong> et
             368 documents — soit un périmètre bien plus large, qui n&apos;est
             pas comparable directement.

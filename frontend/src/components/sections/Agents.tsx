@@ -1,6 +1,7 @@
 import { Redo2, ShieldCheck, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Section } from "@/components/site/primitives";
+import { PipelineSteps } from "@/components/site/PipelineSteps";
 
 const agents = [
   {
@@ -56,6 +57,8 @@ export function Agents() {
           </div>
         ))}
       </div>
+
+      <PipelineSteps className="mt-12" />
     </Section>
   );
 }

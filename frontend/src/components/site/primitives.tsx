@@ -8,7 +8,7 @@ export function Container({
 }: {
   children: ReactNode;
   className?: string;
-  width?: "default" | "narrow" | "wide";
+  width?: "default" | "narrow" | "wide" | "full";
 }) {
   return (
     <div
@@ -17,6 +17,8 @@ export function Container({
         width === "narrow" && "max-w-3xl",
         width === "default" && "max-w-6xl",
         width === "wide" && "max-w-7xl",
+        // Barre de navigation et pied de page : quasi pleine largeur, marges de 72 px en desktop.
+        width === "full" && "max-w-[90rem] px-[clamp(1.25rem,5vw,4.5rem)]",
         className,
       )}
     >

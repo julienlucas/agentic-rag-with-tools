@@ -21,7 +21,9 @@ const badgeVariants = cva(
         warning: "border-transparent bg-warning/12 text-warning",
         destructive: "border-transparent bg-destructive/10 text-destructive",
         outline: "border-hairline-strong text-ink",
-        mono: "mono-xs border-hairline bg-transparent px-2 py-1 uppercase tracking-[0.06em] text-ink-muted",
+        // Mini contour accent : même rendu que le bouton `outline`, sans interaction.
+        outlineBrand: "border-brand bg-transparent text-brand",
+        mono: "mono-xs border-brand bg-transparent px-2 py-1 uppercase tracking-[0.06em] text-brand",
       },
     },
     defaultVariants: {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowUp, ChevronDown, Clock, RotateCcw, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUp, ChevronDown, Clock, RotateCcw, ShieldAlert, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -53,7 +53,7 @@ function CollapsibleAnswer({ children }: { children: ReactNode }) {
         {overflows && !open ? (
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-paper-2 to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-bubble-r to-transparent"
           />
         ) : null}
       </div>
@@ -84,8 +84,8 @@ function CiteMark({ n, citation }: { n: number; citation?: Citation }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{mark}</TooltipTrigger>
-      <TooltipContent className="max-w-sm">
-        <span className="mono-xs block text-brand-light">{citation.locator}</span>
+      <TooltipContent className="max-w-sm bg-brand text-white">
+        <span className="mono-xs block text-white/75">{citation.locator}</span>
         <span className="mt-1 block text-xs leading-relaxed">{citation.excerpt}</span>
       </TooltipContent>
     </Tooltip>
@@ -105,7 +105,9 @@ function CitedSources({ answer, citations }: { answer: string; citations: Citati
       <ul className="mt-2 space-y-1.5">
         {used.map((c) => (
           <li key={c.n} className="flex gap-2 text-[0.7rem] leading-relaxed text-muted-foreground">
-            <span className="mono-xs shrink-0 text-brand-deep">[{c.n}]</span>
+            <span className="mono-xs mt-px inline-grid size-4 shrink-0 place-items-center rounded bg-brand-surface-strong text-[0.6rem] leading-none text-brand-deep">
+              {c.n}
+            </span>
             <span className="min-w-0 flex-1">
               <span className="font-medium text-ink-muted">{c.locator}</span> — {c.excerpt}
             </span>
@@ -117,22 +119,6 @@ function CitedSources({ answer, citations }: { answer: string; citations: Citati
 }
 
 /** Marqueur de tour : Q pour la question, R pour la réponse. */
-function Marker({ kind }: { kind: "q" | "r" }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "-mt-0.5 grid size-6 shrink-0 place-items-center rounded font-mono text-base font-semibold",
-        kind === "q"
-          ? "text-brand-deep"
-          : "text-success",
-      )}
-    >
-      {kind === "q" ? "Q" : "R"}
-    </span>
-  );
-}
-
 function docFromExample(ex: ExampleDoc): DocState {
   return {
     id: ex.id,
@@ -313,292 +299,287 @@ export function DemoChat({ children }: { children?: ReactNode }) {
 
   return (
     <div>
-      <CorpusPanel
-        active={doc}
-        onSelectExample={selectExample}
-        onUpload={upload}
-        onRemoveUpload={removeUpload}
-        onRetry={retry}
-        busy={busy}
-      />
-
       {children}
 
-      <h3 className="-mt-10 display-sm py-6 pb-3">
-        La réponse
-      </h3>
+      {/* Conversation à gauche ; documents (dépôt + exemples) à droite, au-dessus sur mobile. */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="lg:order-last lg:flex lg:flex-col">
+          <CorpusPanel
+            active={doc}
+            onSelectExample={selectExample}
+            onUpload={upload}
+            onRemoveUpload={removeUpload}
+            onRetry={retry}
+            busy={busy}
+          />
+        </div>
 
-      <div className="card-paper bg-white overflow-hidden">
-        <div>
-          {/* conversation */}
-          <div className="flex min-h-[28rem] flex-col">
-            <ScrollArea className="h-fit flex-1" viewportRef={viewport}>
-              <div className="space-y-5 p-5">
-                {showExample ? (
-                  <div className="rise-in space-y-5">
-                    {doc?.status === "loading" ? (
-                      <span className="mono-xs text-muted-foreground">
-                        indexation en cours…
-                      </span>
-                    ) : null}
-                    <div className="flex justify-end">
-                      <p className="flex max-w-[85%] gap-2.5 rounded-2xl bg-ink px-4 py-2.5 text-sm leading-relaxed text-on-ink">
-                        <Marker kind="q" />
-                        <span className="min-w-0 flex-1">
-                          {exampleOutput.question}
+        <div className="card-paper min-w-0 border-brand bg-white overflow-hidden">
+          <div>
+            {/* conversation */}
+            <div className="flex min-h-[28rem] flex-col">
+              <ScrollArea className="h-fit flex-1" viewportRef={viewport} data-lenis-prevent>
+                <div className="space-y-5 p-5">
+                  {showExample ? (
+                    <div className="rise-in space-y-5">
+                      {doc?.status === "loading" ? (
+                        <span className="meta">
+                          indexation en cours…
                         </span>
-                      </p>
-                    </div>
-                    <div className="max-w-[95%]">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span className="mono-xs text-muted-foreground">
-                            confiance reranker{" "}
-                            {EXAMPLE_SIGNALS.rerankScore != null ? `${Math.round(EXAMPLE_SIGNALS.rerankScore * 100)}\u00a0%` : null}
+                      ) : null}
+                      <div className="flex justify-end">
+                        <p className="flex max-w-[85%] gap-2.5 rounded-2xl bg-bubble-q px-4 py-2.5 text-sm leading-relaxed text-white">
+                          <span className="min-w-0 flex-1">
+                            {exampleOutput.question}
                           </span>
-                          <span className="mono-xs inline-flex items-center gap-1 text-muted-foreground">
-                            <Clock className="size-3" /> {exampleOutput.elapsed}
-                            s
-                          </span>
-                        </div>
-                        <div className="flex gap-2.5 rounded-2xl border border-hairline bg-paper-2 px-4 py-3.5">
-                          <Marker kind="r" />
-                          <div className="min-w-0 flex-1">
-                            <CollapsibleAnswer>
-                              <div className="prose-rag">
-                                {renderMarkdown(exampleOutput.answer)}
-                              </div>
-                            </CollapsibleAnswer>
-                          </div>
-                        </div>
+                        </p>
                       </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                {turns.length === 0 && !pending && !showExample ? (
-                  <div className="rise-in">
-                    <h3 className="display-sm">
-                      {doc
-                        ? `Interrogez « ${doc.title} ».`
-                        : "Chargez un document pour commencer."}
-                    </h3>
-                    <p className="copy mt-2 text-sm">
-                      Le pipeline cible le document, cherche en lexical et en
-                      vectoriel, fusionne, reranke, vérifie la pertinence des
-                      passages, corrige la recherche si besoin — puis répond
-                      uniquement à partir des preuves retenues.
-                    </p>
-                    {doc?.status === "loading" ? (
-                      <p className="mono-xs mt-4 text-muted-foreground">
-                        Mistral OCR et indexation en cours… la première question
-                        sera possible dans quelques secondes.
-                      </p>
-                    ) : null}
-                    {suggestions.length ? (
-                      <div className="mt-5 grid gap-2">
-                        {suggestions.map((s) => (
-                          <button
-                            key={s.text}
-                            type="button"
-                            disabled={!ready}
-                            onClick={() => ask(s.text)}
-                            className="group flex items-start gap-3 rounded-md border border-hairline bg-paper px-3.5 py-3 text-left text-sm transition-colors hover:border-brand hover:bg-brand-surface disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-deep" />
-                            <span className="min-w-0 flex-1">
-                              <span className="block leading-snug">
-                                {s.text}
-                              </span>
-                              <span className="mono-xs mt-1 block text-muted-foreground">
-                                {s.hint}
-                              </span>
-                            </span>
-                            <ArrowUp className="mt-0.5 size-3.5 shrink-0 rotate-45 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {turns.map((turn) =>
-                  turn.role === "user" ? (
-                    <div key={turn.id} className="flex justify-end">
-                      <p className="rise-in flex max-w-[85%] gap-2.5 rounded-2xl rounded-br-sm bg-ink px-4 py-2.5 text-sm leading-relaxed text-on-ink">
-                        <Marker kind="q" />
-                        <span className="min-w-0 flex-1">{turn.text}</span>
-                      </p>
-                    </div>
-                  ) : (
-                    <div key={turn.id} className="rise-in max-w-[95%]">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          {turn.signals.rerankScore != null ? (
-                            <span className="mono-xs text-muted-foreground">
+                      <div className="max-w-[85%]">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <span className="meta">
                               confiance reranker{" "}
-                              {Math.round(turn.signals.rerankScore * 100)}&nbsp;%
+                              {EXAMPLE_SIGNALS.rerankScore != null ? `${Math.round(EXAMPLE_SIGNALS.rerankScore * 100)}\u00a0%` : null}
                             </span>
-                          ) : null}
-                          <span className="mono-xs inline-flex items-center gap-1 text-muted-foreground">
-                            <Clock className="size-3" /> {turn.elapsed}s
-                          </span>
-                        </div>
-                        <div
-                          className={cn(
-                            "flex gap-2.5 rounded-2xl border px-4 py-3.5",
-                            turn.failed
-                              ? "border-destructive/40 bg-destructive/5"
-                              : "border-hairline bg-paper-2",
-                          )}
-                        >
-                          {turn.failed ? null : <Marker kind="r" />}
-                          <div className="min-w-0 flex-1">
-                            {turn.failed ? (
-                              <p className="flex gap-2 text-sm text-destructive">
-                                <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-                                {turn.answer}
-                              </p>
-                            ) : (
+                            <span className="meta inline-flex items-center gap-1">
+                              <Clock className="size-3" /> {exampleOutput.elapsed}
+                              s
+                            </span>
+                          </div>
+                          <div className="flex gap-2.5 rounded-2xl bg-bubble-r px-4 py-3.5">
+                            <div className="min-w-0 flex-1">
                               <CollapsibleAnswer>
                                 <div className="prose-rag">
-                                  {renderMarkdown(turn.answer, (n) => (
-                                    <CiteMark n={n} citation={turn.citations.find((c) => c.n === n)} />
+                                  {renderMarkdown(exampleOutput.answer, (n) => (
+                                    <CiteMark n={n} citation={exampleOutput.citations.find((c) => c.n === n)} />
                                   ))}
                                 </div>
                               </CollapsibleAnswer>
-                            )}
-                            {!turn.failed ? (
-                              <CitedSources answer={turn.answer} citations={turn.citations} />
-                            ) : null}
-                            {!turn.failed &&
-                            turn.signals.correctiveRounds > 0 ? (
-                              <p className="mt-3 flex gap-2 border-t border-hairline pt-3 text-xs text-muted-foreground">
-                                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-deep" />
-                                Le modèle a jugé le contexte insuffisant et a
-                                cherché lui-même (search, grep, read_page) avant
-                                de répondre — le détail est dans le rapport.
-                              </p>
-                            ) : null}
+                              <CitedSources answer={exampleOutput.answer} citations={exampleOutput.citations} />
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  ),
-                )}
+                  ) : null}
 
-                {pending ? (
-                  <div className="rise-in space-y-2 rounded-2xl border border-dashed border-brand/50 bg-brand-surface/40 px-4 py-3.5">
-                    {pipelineSteps
-                      .filter((s) => !s.conditional)
-                      .map((s) => {
-                        const i = pipelineSteps.indexOf(s);
-                        const done = stage > i;
-                        const running = stage === i;
-                        return (
-                          <div
-                            key={s.key}
-                            className={cn(
-                              "flex items-center gap-2.5 text-xs transition-opacity",
-                              !done && !running && "opacity-40",
-                            )}
-                          >
-                            {done ? (
-                              <span className="size-3.5 shrink-0 rounded-full bg-success/80" />
-                            ) : (
-                              <span
-                                className={cn(
-                                  "size-3.5 shrink-0 rounded-full border border-brand",
-                                  running && "signal-dot bg-brand",
-                                )}
-                              />
-                            )}
-                            <span
-                              className={cn(
-                                "font-medium",
-                                done && "text-ink-muted",
-                              )}
+                  {turns.length === 0 && !pending && !showExample ? (
+                    <div className="rise-in">
+                      <h3 className="display-sm">
+                        {doc
+                          ? `Interrogez « ${doc.title} ».`
+                          : "Chargez un document pour commencer."}
+                      </h3>
+                      <p className="copy mt-2 text-sm">
+                        Le pipeline cible le document, cherche en lexical et en
+                        vectoriel, fusionne, reranke, vérifie la pertinence des
+                        passages, corrige la recherche si besoin — puis répond
+                        uniquement à partir des preuves retenues.
+                      </p>
+                      {doc?.status === "loading" ? (
+                        <p className="meta mt-4">
+                          Mistral OCR et indexation en cours… la première question
+                          sera possible dans quelques secondes.
+                        </p>
+                      ) : null}
+                      {suggestions.length ? (
+                        <div className="mt-5 grid gap-2">
+                          {suggestions.map((s) => (
+                            <button
+                              key={s.text}
+                              type="button"
+                              disabled={!ready}
+                              onClick={() => ask(s.text)}
+                              className="group flex items-start gap-3 rounded-md border border-hairline bg-paper px-3.5 py-3 text-left text-sm transition-colors hover:border-brand hover:bg-brand-surface disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              {s.label}
-                            </span>
-                            {running ? (
-                              <span className="mono-xs text-muted-foreground">
-                                en cours…
+                              <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-deep" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block leading-snug">
+                                  {s.text}
+                                </span>
+                                <span className="meta mt-1 block">
+                                  {s.hint}
+                                </span>
+                              </span>
+                              <ArrowUp className="mt-0.5 size-3.5 shrink-0 rotate-45 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {turns.map((turn) =>
+                    turn.role === "user" ? (
+                      <div key={turn.id} className="flex justify-end">
+                        <p className="rise-in flex max-w-[85%] gap-2.5 rounded-2xl rounded-br-sm bg-bubble-q px-4 py-2.5 text-sm leading-relaxed text-white">
+                          <span className="min-w-0 flex-1">{turn.text}</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div key={turn.id} className="rise-in max-w-[95%]">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            {turn.signals.rerankScore != null ? (
+                              <span className="meta">
+                                confiance reranker{" "}
+                                {Math.round(turn.signals.rerankScore * 100)}&nbsp;%
                               </span>
                             ) : null}
+                            <span className="meta inline-flex items-center gap-1">
+                              <Clock className="size-3" /> {turn.elapsed}s
+                            </span>
                           </div>
-                        );
-                      })}
-                    <p className="mono-xs pt-1 text-muted-foreground">
-                      {elapsed}s · 3 à 5 appels LLM en série, comptez 10 à 40 s
-                    </p>
+                          <div
+                            className={cn(
+                              "flex gap-2.5 rounded-2xl border px-4 py-3.5",
+                              turn.failed
+                                ? "border-destructive/40 bg-destructive/5"
+                                : "border-transparent bg-bubble-r",
+                            )}
+                          >
+                            <div className="min-w-0 flex-1">
+                              {turn.failed ? (
+                                <p className="flex gap-2 text-sm text-destructive">
+                                  <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+                                  {turn.answer}
+                                </p>
+                              ) : (
+                                <CollapsibleAnswer>
+                                  <div className="prose-rag">
+                                    {renderMarkdown(turn.answer, (n) => (
+                                      <CiteMark n={n} citation={turn.citations.find((c) => c.n === n)} />
+                                    ))}
+                                  </div>
+                                </CollapsibleAnswer>
+                              )}
+                              {!turn.failed ? (
+                                <CitedSources answer={turn.answer} citations={turn.citations} />
+                              ) : null}
+                              {!turn.failed &&
+                              turn.signals.correctiveRounds > 0 ? (
+                                <p className="mt-3 flex gap-2 border-t border-hairline pt-3 text-xs text-muted-foreground">
+                                  <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-deep" />
+                                  Le modèle a jugé le contexte insuffisant et a
+                                  cherché lui-même (search, grep, read_page) avant
+                                  de répondre — le détail est dans le rapport.
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ),
+                  )}
+
+                  {pending ? (
+                    <div className="rise-in space-y-2 rounded-2xl border border-dashed border-brand/50 bg-brand-surface/40 px-4 py-3.5">
+                      {pipelineSteps
+                        .filter((s) => !s.conditional)
+                        .map((s) => {
+                          const i = pipelineSteps.indexOf(s);
+                          const done = stage > i;
+                          const running = stage === i;
+                          return (
+                            <div
+                              key={s.key}
+                              className={cn(
+                                "flex items-center gap-2.5 text-xs transition-opacity",
+                                !done && !running && "opacity-40",
+                              )}
+                            >
+                              {done ? (
+                                <span className="size-3.5 shrink-0 rounded-full bg-success/80" />
+                              ) : (
+                                <span
+                                  className={cn(
+                                    "size-3.5 shrink-0 rounded-full border border-brand",
+                                    running && "signal-dot bg-brand",
+                                  )}
+                                />
+                              )}
+                              <span
+                                className={cn(
+                                  "font-medium",
+                                  done && "text-ink-muted",
+                                )}
+                              >
+                                {s.label}
+                              </span>
+                              {running ? (
+                                <span className="meta">
+                                  en cours…
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      <p className="meta pt-1">
+                        {elapsed}s · 3 à 5 appels LLM en série, comptez 10 à 40 s
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </ScrollArea>
+
+              {/* saisie */}
+              <div className="border-t border-hairline p-3 px-5">
+                <div className="flex items-end gap-2 rounded-sm border border-hairline-strong bg-paper p-2 transition-colors focus-within:border-brand">
+                  <textarea
+                      rows={1}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        ask(draft);
+                      }
+                    }}
+                    disabled={!ready || pending}
+                    placeholder={
+                      ready
+                        ? "Posez une question sur le document…"
+                        : doc?.status === "loading"
+                          ? "Indexation en cours…"
+                          : "Chargez un document pour poser une question"
+                    }
+                    className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+                  />
+                  <Button
+                    variant="brand"
+                    onClick={() => ask(draft)}
+                    disabled={!draft.trim() || !ready || pending}
+                    className="h-9 shrink-0 px-3.5 disabled:opacity-100"
+                  >
+                    Envoyer
+                    <ArrowRight />
+                  </Button>
+                </div>
+                {suggestions.length || turns.length ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {suggestions.length ? (
+                      <span className="meta mr-1">questions préparées</span>
+                    ) : null}
+                    {turns.length ? (
+                      <Button variant="pill" size="pill" onClick={reset} disabled={pending} className="gap-1 [&_svg]:size-3">
+                        <RotateCcw /> Réinitialiser
+                      </Button>
+                    ) : null}
+                    {suggestions.map((s) => (
+                      <Button
+                        key={s.text}
+                        variant="pill"
+                        size="pill"
+                        disabled={!ready || pending}
+                        onClick={() => ask(s.text)}
+                        title={s.text}
+                      >
+                        <span className="truncate">{s.text.slice(0, 48)}…</span>
+                      </Button>
+                    ))}
                   </div>
                 ) : null}
               </div>
-            </ScrollArea>
-
-            {/* saisie */}
-            <div className="border-t border-hairline p-3 px-5">
-              <div className="flex items-end gap-2 rounded-sm border border-hairline-strong bg-paper p-2 transition-colors focus-within:border-brand">
-                <textarea
-                    rows={1}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      ask(draft);
-                    }
-                  }}
-                  disabled={!ready || pending}
-                  placeholder={
-                    ready
-                      ? "Posez une question sur le document…"
-                      : doc?.status === "loading"
-                        ? "Indexation en cours…"
-                        : "Chargez un document pour poser une question"
-                  }
-                  className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-                />
-                <Button
-                  variant="brand"
-                  onClick={() => ask(draft)}
-                  disabled={!draft.trim() || !ready || pending}
-                  className="h-9 shrink-0 px-3.5"
-                >
-                  Envoyer
-                  <ArrowUp />
-                </Button>
-              </div>
-              {suggestions.length || turns.length ? (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  {suggestions.length ? (
-                    <span className="eyebrow mr-1">Questions</span>
-                  ) : null}
-                  {turns.length ? (
-                    <button
-                      type="button"
-                      onClick={reset}
-                      disabled={pending}
-                      className="mono-xs inline-flex items-center gap-1 rounded-full border border-hairline px-2.5 py-1 text-muted-foreground transition-colors hover:border-brand hover:text-brand-deep disabled:opacity-40"
-                    >
-                      <RotateCcw className="size-3" /> Réinitialiser
-                    </button>
-                  ) : null}
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.text}
-                      type="button"
-                      disabled={!ready || pending}
-                      onClick={() => ask(s.text)}
-                      className="mono-xs cursor-pointer max-w-full truncate rounded-full border border-hairline px-2.5 py-1 text-muted-foreground transition-colors hover:border-brand hover:text-brand-deep disabled:opacity-40"
-                      title={s.text}
-                    >
-                      {s.text.slice(0, 48)}…
-                    </button>
-                  ))}
-                </div>
-              ) : null}
             </div>
           </div>
         </div>

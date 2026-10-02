@@ -65,18 +65,6 @@ const limits = [
   {
     title: "Le recall du retrieval",
     text: "Sur 6 questions sur 26, la page de preuve annotée n'atteint jamais le modèle, outils compris : il y répond pourtant juste, à partir d'autres pages du 10-K. Quand elle l'atteint, il répond juste dans 19 cas sur 20.",
-  },
-  {
-    title: "Le coût du modèle de raisonnement",
-    text: (
-      <>
-        Ce RAG agentique répond avec Claude Sonnet 5 (claude-sonnet-5), et Mistral Small pour les
-        sous-agents. Sonnet 5 coûte 2 $ / 10 $ par million de tokens, contre 0,50 $ / 1,50 $ pour
-        Mistral Large : 1,05 $ de génération sur ce run de 26 questions, dans les deux modes. Le run
-        précédent, sur Mistral Large, donnait 83,3 % ; le retrieval mesuré diffère aussi entre les
-        deux (recall@5 : 20 % → 42 %), l&apos;écart ne mesure donc pas le seul effet du modèle.
-      </>
-    ),
   }
 ];
 
@@ -121,7 +109,7 @@ export function Tools() {
       {/* moins de tokens, plus de précision */}
       <div className="card-paper border-hairline mt-10 p-8">
         <p className="display-sm mt-8">Voici les gains avec des outils</p>
-        <p className="mono-xs mt-1 text-muted-foreground">
+        <p className="meta mt-1">
           Mistral Agentic Search, modèle Mistral Medium 3.5 · sur FinanceBench, 150 questions, 368 documents, soit 53900
           pages indéxées ensemble
         </p>
@@ -132,7 +120,7 @@ export function Tools() {
                 {g.value}
               </div>
               <div className="mt-1 text-sm font-medium">{g.label}</div>
-              <div className="mono-xs mt-1 text-muted-foreground">
+              <div className="meta mt-1">
                 {g.detail}
               </div>
             </div>
@@ -144,7 +132,7 @@ export function Tools() {
             des recherches relancées pour rien par une{" "}
             <span className="accent-italic">navigation précise</span>. »
           </p>
-          <cite className="mono-xs mt-2 block not-italic text-muted-foreground">
+          <cite className="meta mt-2 block not-italic">
             Mistral AI, Introducing Agentic Search
           </cite>
         </blockquote>
