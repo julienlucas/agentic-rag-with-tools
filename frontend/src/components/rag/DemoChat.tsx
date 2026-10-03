@@ -181,7 +181,11 @@ function AnswerFeedback({ token, sessionId }: { token: string; sessionId: string
       <div className="flex items-center gap-1">
         {voteButton(1)}
         {voteButton(0)}
-        {state === "done" ? <span className="meta ml-1">merci pour votre retour</span> : null}
+        {state === "done" ? (
+          <span className="meta ml-1">merci pour votre retour</span>
+        ) : (
+          <span className="meta ml-1">Notez les réponses, surtout si elles sont insatisfaisantes</span>
+        )}
       </div>
       {state === "comment" || (state === "sending" && vote === 0) ? (
         <div className="rise-in mt-2 rounded-sm border border-hairline-strong bg-paper p-2">
