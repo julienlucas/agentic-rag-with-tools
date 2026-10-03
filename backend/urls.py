@@ -1,4 +1,4 @@
-from .views import index, upload_file, process_question, load_file, list_documents, delete_document, delete_space
+from .views import index, upload_file, process_question, load_file, list_documents, delete_document, delete_space, submit_feedback
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/documents', list_documents),
     path('api/delete-document', delete_document),
     path('api/delete-space', delete_space),
+    path('api/feedback', submit_feedback),
 ]
 
 if settings.DEBUG:

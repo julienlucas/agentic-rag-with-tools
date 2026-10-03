@@ -107,9 +107,11 @@ class FinanceBenchJudge:
 
     VALID_VERDICTS = {"CORRECT", "INCORRECT", "REFUSAL"}
 
-    def __init__(self, llm=None, model: Optional[str] = None):
+    def __init__(self, llm=None, model: Optional[str] = None, prompt: Optional[str] = None):
         self.llm = llm
         self.model = model or settings.EVAL_JUDGE_MODEL_ID
+        # Même protocole avec un autre prompt (mêmes champs) : evaluation/feedback/replay.py.
+        self.prompt = prompt or FINANCEBENCH_JUDGE_PROMPT
 
     def _get_llm(self):
         if self.llm is None:
@@ -189,7 +191,7 @@ class FinanceBenchJudge:
         if len(context) > max_context_len:
             context = context[:max_context_len] + "..."
 
-        prompt = FINANCEBENCH_JUDGE_PROMPT.format(
+        prompt = self.prompt.format(
             question=question,
             expected_answer=expected_answer or "(non fournie)",
             justification=justification or "(non fournie)",

@@ -75,7 +75,8 @@ def test_upload_then_question_goes_through_the_pipeline(api, monkeypatch):
 
     r = _post_json(api, "/api/process-question", {"question": "  quel CA ?  ", "session_id": "s"})
     assert r.status_code == 200
-    assert r.json() == {"draft_answer": "réponse [1]", "verification_report": "rapport", "citations": [{"n": 1}]}
+    assert r.json() == {"draft_answer": "réponse [1]", "verification_report": "rapport", "citations": [{"n": 1}],
+                        "feedback_token": None}  # votes désactivés sans LANGSMITH_API_KEY
     assert seen == {"question": "quel CA ?", "retriever": ("retriever", "s", 1), "pages": 2}
 
 

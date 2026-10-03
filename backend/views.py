@@ -1,6 +1,7 @@
 import json
 import hashlib
 import os
+import uuid
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
@@ -10,9 +11,11 @@ from .retriever.builder import RetrieverBuilder
 from .retriever.page_store import PageStore
 from .vectorstore import QuotaExceeded, get_store
 from .agents.workflow import AgentWorkflow
+from . import feedback
 from .config import constants
 from .config.settings import settings
 from .utils.logging import logger
+from langsmith import trace
 
 # Configuration LangSmith pour le tracking, seulement si une clé est fournie : sans clé,
 # os.environ[...] = None faisait planter l'import du module (la clé est optionnelle).
@@ -20,7 +23,7 @@ if settings.LANGSMITH_API_KEY:
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
     os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
-    os.environ["LANGCHAIN_PROJECT"] = "agentic-search"
+    os.environ["LANGCHAIN_PROJECT"] = feedback.TRACE_PROJECT
 
 # Les documents vivent dans Qdrant, un espace par tenant. En attendant l'authentification,
 # le tenant est le session_id envoyé par le client : ce n'est PAS une isolation réelle
@@ -181,16 +184,30 @@ def process_question(request):
         if not documents:
             return JsonResponse({"error": "Aucun document chargé. Veuillez d'abord charger un document."}, status=400)
 
-        result = _workflow.full_pipeline(
-            question=question,
-            retriever=RetrieverBuilder().build_hybrid_retriever(tenant),
-            page_store=_page_store(tenant, documents),
-        )
+        # Run racine à l'identifiant connu : les appels LangChain du pipeline s'y rattachent,
+        # et le vote de l'utilisateur vise ce run (feedback.py). Les métadonnées permettent de
+        # rejouer la question plus tard sur les mêmes documents (evaluation/feedback/replay.py).
+        run_id = uuid.uuid4()
+        with trace(
+            "question", "chain", run_id=run_id, inputs={"question": question},
+            metadata={
+                "tenant_id": tenant.tenant_id,
+                "documents": [d["file_hash"] for d in documents],
+                "document_names": [os.path.basename(d["source"]) for d in documents],
+            },
+        ) as run:
+            result = _workflow.full_pipeline(
+                question=question,
+                retriever=RetrieverBuilder().build_hybrid_retriever(tenant),
+                page_store=_page_store(tenant, documents),
+            )
+            run.end(outputs=result)
 
         return JsonResponse({
             "draft_answer": result["draft_answer"],
             "verification_report": result["verification_report"],
             "citations": result.get("citations", []),
+            "feedback_token": feedback.issue_token(run_id, tenant.tenant_id) if feedback.enabled() else None,
         })
 
     except BadTenant as e:
@@ -242,3 +259,29 @@ def delete_space(request):
     except BadTenant as e:
         return JsonResponse({"error": str(e)}, status=400)
 
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def submit_feedback(request):
+    """Vote 👍 (score 1) / 👎 (score 0) sur une réponse, avec un commentaire facultatif."""
+    data = json.loads(request.body)
+    score = data.get("score")
+    comment = (data.get("comment") or "").strip()
+    if not feedback.enabled():
+        return JsonResponse({"error": "Les votes ne sont pas activés sur ce serveur."}, status=503)
+    if score not in (0, 1) or isinstance(score, bool):
+        return JsonResponse({"error": "score doit valoir 0 ou 1."}, status=400)
+    if len(comment) > feedback.COMMENT_MAX_CHARS:
+        return JsonResponse({"error": f"Commentaire limité à {feedback.COMMENT_MAX_CHARS} caractères."}, status=400)
+    try:
+        tenant = _tenant(data.get("session_id", "default"))
+        run_id = feedback.read_token(data.get("feedback_token") or "", tenant.tenant_id)
+    except (BadTenant, feedback.InvalidFeedback) as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    try:
+        feedback.send(run_id, score, comment)
+    except Exception as e:
+        logger.error(f"Envoi du vote à LangSmith impossible: {e}")
+        return JsonResponse({"error": "Vote non enregistré, réessayez plus tard."}, status=502)
+    return JsonResponse({"message": "Merci pour votre retour"})

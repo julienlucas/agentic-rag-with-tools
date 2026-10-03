@@ -29,4 +29,5 @@ export type Turn =
       citations: Citation[];
       evidence?: Evidence[];
       failed?: boolean;
+      feedbackToken?: string | null;
     };

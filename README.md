@@ -145,6 +145,29 @@ LANGSMITH_PROJECT=agentic-search
 uv run python manage.py runserver
 ```
 
+## Votes des utilisateurs : de 👎 au test de non-régression
+
+Sous chaque réponse, un 👍 / 👎 (le 👎 ouvre un commentaire facultatif). Actifs seulement avec
+`LANGSMITH_API_KEY` : chaque question est tracée dans le projet `agentic-search` sous un run racine
+`question`, et le vote devient un feedback `user_score` (1 / 0) sur cette trace. Le navigateur ne voit
+qu'un jeton signé qui lie la trace à son espace : en production, définir `DJANGO_SECRET_KEY`.
+
+1. **Récolter** : `uv run python evaluation/feedback/collect.py` range les votes dans le dataset
+   LangSmith « Retours utilisateurs », une fois par trace. Un 👍 y entre avec sa réponse comme
+   référence. Un 👎 y entre avec sa réponse rejetée et le commentaire en métadonnées.
+2. **Analyser** : chaque 👎 reçoit une cause d'échec proposée par le juge (Mistral, pas Claude) :
+   `mauvais_document`, `passage_manquant`, `erreur_lecture`, `erreur_calcul`, `refus_a_tort`,
+   `hors_corpus`, `forme` ou `autre`. Elle est aussi posée en feedback `failure_category` sur la trace,
+   et `collect.py` affiche la répartition. La cause dit où corriger : routage, retrieval, prompt ou outils.
+3. **Corriger** : `uv run python evaluation/feedback/replay.py` rejoue les exemples qui ont une
+   référence, sur les mêmes documents du même espace, et les juge. Un 👍 qui n'est plus retrouvé est
+   une **régression** (code de sortie 1). Un 👎 dont on a écrit la bonne réponse dans `outputs.answer`
+   (depuis LangSmith) passe en `CORRIGÉ` le jour où le système la trouve. `--push` enregistre le rejeu
+   comme expérience du dataset, comparable aux précédentes.
+
+Les réponses 👍 ne sont pas injectées dans le prompt comme exemples : elles viennent des documents
+d'un utilisateur et fuiraient vers les autres espaces. Elles servent de références de test.
+
 ## Évaluation FinanceBench (documents financiers difficiles)
 
 L'évaluation, sur [FinanceBench](https://github.com/patronus-ai/financebench) (Patronus AI) —

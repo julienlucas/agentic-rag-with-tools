@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, ArrowUp, ChevronDown, Clock, RotateCcw, ShieldAlert, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUp,
+  ChevronDown,
+  Clock,
+  RotateCcw,
+  ShieldAlert,
+  Sparkles,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -114,6 +124,95 @@ function CitedSources({ answer, citations }: { answer: string; citations: Citati
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * Vote 👍 / 👎 sous une réponse. Le 👎 ouvre un commentaire facultatif avant l'envoi.
+ * Un seul vote par réponse : il devient un exemple du jeu de non-régression (evaluation/feedback/).
+ */
+function AnswerFeedback({ token, sessionId }: { token: string; sessionId: string }) {
+  const [state, setState] = useState<"idle" | "comment" | "sending" | "done">("idle");
+  const [vote, setVote] = useState<0 | 1 | null>(null);
+  const [comment, setComment] = useState("");
+
+  async function send(score: 0 | 1, text?: string) {
+    setVote(score);
+    setState("sending");
+    try {
+      await api.sendFeedback(token, score, sessionId, text?.trim() || undefined);
+      setState("done");
+    } catch (err) {
+      setState(score === 0 ? "comment" : "idle");
+      if (score === 1) setVote(null);
+      toast.error("Vote non enregistré", {
+        description: err instanceof Error ? err.message : "Erreur de connexion au backend",
+      });
+    }
+  }
+
+  const voteButton = (score: 0 | 1) => {
+    const Icon = score === 1 ? ThumbsUp : ThumbsDown;
+    const label = score === 1 ? "Réponse satisfaisante" : "Réponse pas satisfaisante";
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        title={label}
+        aria-pressed={vote === score}
+        disabled={state === "sending" || state === "done"}
+        onClick={() => (score === 1 ? send(1) : (setVote(0), setState("comment")))}
+        className={cn(
+          "inline-grid size-7 place-items-center rounded-sm border transition-colors cursor-pointer disabled:cursor-default",
+          vote === score
+            ? "border-brand bg-brand-surface text-brand-deep"
+            : "border-transparent text-muted-foreground hover:border-hairline hover:text-brand-deep",
+          state === "done" && vote !== score && "hidden",
+        )}
+      >
+        <Icon className="size-3.5" />
+      </button>
+    );
+  };
+
+  return (
+    <div className="mt-1.5">
+      <div className="flex items-center gap-1">
+        {voteButton(1)}
+        {voteButton(0)}
+        {state === "done" ? <span className="meta ml-1">merci pour votre retour</span> : null}
+      </div>
+      {state === "comment" || (state === "sending" && vote === 0) ? (
+        <div className="rise-in mt-2 rounded-sm border border-hairline-strong bg-paper p-2">
+          <textarea
+            rows={2}
+            autoFocus
+            value={comment}
+            maxLength={2000}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Qu'est-ce qui ne va pas ? (facultatif : mauvais chiffre, mauvais document, réponse incomplète…)"
+            className="w-full resize-none bg-transparent px-1 text-xs outline-none placeholder:text-muted-foreground"
+          />
+          <div className="mt-1 flex justify-end gap-1.5">
+            <Button
+              variant="pill"
+              size="pill"
+              disabled={state === "sending"}
+              onClick={() => {
+                setVote(null);
+                setComment("");
+                setState("idle");
+              }}
+            >
+              Annuler
+            </Button>
+            <Button variant="pill" size="pill" disabled={state === "sending"} onClick={() => send(0, comment)}>
+              Envoyer
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -261,6 +360,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
           signals,
           elapsed: Math.round((Date.now() - started) / 1000),
           citations: res.citations ?? [],
+          feedbackToken: res.feedback_token,
         },
       ]);
     } catch (err) {
@@ -467,6 +567,9 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                               ) : null}
                             </div>
                           </div>
+                          {!turn.failed && turn.feedbackToken ? (
+                            <AnswerFeedback token={turn.feedbackToken} sessionId={sessionId} />
+                          ) : null}
                         </div>
                       </div>
                     ),

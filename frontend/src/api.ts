@@ -35,6 +35,8 @@ export type ProcessQuestionResponse = {
   draft_answer: string;
   verification_report: string;
   citations: Citation[];
+  /** Jeton signé pour voter sur la réponse ; null si les votes sont désactivés côté serveur. */
+  feedback_token: string | null;
 };
 
 export const api = {
@@ -64,5 +66,14 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, session_id: sessionId }),
     }).then((r) => parse<ProcessQuestionResponse>(r));
+  },
+
+  /** Vote sur une réponse : 1 = satisfait, 0 = pas satisfait (commentaire facultatif). */
+  sendFeedback(token: string, score: 0 | 1, sessionId: string, comment?: string) {
+    return fetch(`${API_URL}/api/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ feedback_token: token, score, comment, session_id: sessionId }),
+    }).then((r) => parse<{ message: string }>(r));
   },
 };

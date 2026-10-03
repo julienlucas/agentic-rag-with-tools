@@ -224,3 +224,4 @@ frontend/dist/
 
 # Garde-fous de régression FinanceBench : derniers runs locaux
 evaluation/financebench/regression/last_run/
+evaluation/feedback/last_run.json
