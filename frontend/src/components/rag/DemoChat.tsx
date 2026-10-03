@@ -94,8 +94,8 @@ function CiteMark({ n, citation }: { n: number; citation?: Citation }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{mark}</TooltipTrigger>
-      <TooltipContent className="max-w-sm bg-brand text-white">
-        <span className="mono-xs block text-white/75">{citation.locator}</span>
+      <TooltipContent className="max-w-sm bg-brand text-on-brand">
+        <span className="mono-xs block text-on-brand/75">{citation.locator}</span>
         <span className="mt-1 block text-xs leading-relaxed">{citation.excerpt}</span>
       </TooltipContent>
     </Tooltip>
@@ -433,7 +433,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                         </span>
                       ) : null}
                       <div className="flex justify-end">
-                        <p className="flex max-w-[85%] gap-2.5 rounded-2xl bg-bubble-q px-4 py-2.5 text-sm leading-relaxed text-white">
+                        <p className="flex max-w-[85%] gap-2.5 rounded-2xl bg-bubble-q px-4 py-2.5 text-sm leading-relaxed text-on-brand">
                           <span className="min-w-0 flex-1">
                             {exampleOutput.question}
                           </span>
@@ -517,7 +517,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                   {turns.map((turn) =>
                     turn.role === "user" ? (
                       <div key={turn.id} className="flex justify-end">
-                        <p className="rise-in flex max-w-[85%] gap-2.5 rounded-2xl rounded-br-sm bg-bubble-q px-4 py-2.5 text-sm leading-relaxed text-white">
+                        <p className="rise-in flex max-w-[85%] gap-2.5 rounded-2xl rounded-br-sm bg-bubble-q px-4 py-2.5 text-sm leading-relaxed text-on-brand">
                           <span className="min-w-0 flex-1">{turn.text}</span>
                         </p>
                       </div>

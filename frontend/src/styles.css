@@ -159,13 +159,13 @@
   /* ---- L'or, en nuances ----
      Une seule teinte, déclinée du lavis à l'encre dorée. `--signal` est le rôle
      (l'accent), `--gold-*` est la matière : on manipule le rôle, jamais la valeur. */
-  --gold-100: #f2ebd5; /* lavis — fonds de section, wash */
-  --gold-200: #e3d5a8; /* champagne — panneaux, série basse d'un graphe */
-  --gold-300: #c2a04c; /* or clair — accent posé sur l'encre */
-  --gold-500: #8d7022; /* or bruni — l'accent, aplats et barres (texte blanc : 4,7:1) */
-  --gold-600: #705300; /* hover d'un aplat */
-  --gold-700: #624900; /* texte accent sur papier — 7,6:1 */
-  --gold-900: #2f2a17; /* encre dorée — série haute d'un graphe */
+  --gold-100: #fdf6e0; /* lavis — fonds de section, wash */
+  --gold-200: #f7e4a6; /* champagne — panneaux, série basse d'un graphe */
+  --gold-300: #edc95a; /* or clair — accent posé sur l'encre */
+  --gold-500: #e0b030; /* or vif — l'accent, aplats et barres (texte encre : 9,6:1) */
+  --gold-600: #cc9b1c; /* hover d'un aplat */
+  --gold-700: #8f6a00; /* texte accent sur papier — 4,8:1 */
+  --gold-900: #4a3a0f; /* encre dorée — série haute d'un graphe */
 
   --signal: var(--gold-500);
   --signal-strong: var(--gold-600);
@@ -180,7 +180,7 @@
   --popover-foreground: var(--foreground);
 
   --primary: var(--ink);
-  --primary-foreground: var(--paper);
+  --primary-foreground: var(--ink);
   --secondary: var(--paper-2);
   --secondary-foreground: var(--ink-soft);
   --muted: var(--paper-2);
@@ -200,10 +200,10 @@
   --brand-strong: var(--signal-strong);
   --brand-deep: var(--signal-deep);
   --brand-ink: var(--ink); /* aplat sombre des boutons primaires */
-  --on-brand: #ffffff; /* texte et icônes posés sur l'or */
+  --on-brand: var(--ink); /* texte et icônes posés sur l'or : encre, le blanc ne tient pas sur l'or vif */
 
   /* Bulles du chat : question en anthracite (moins dur que l'encre), réponse en gris neutre. */
-  --bubble-q: var(--signal); /* question : or bruni, texte blanc (4,7:1) */
+  --bubble-q: var(--signal); /* question : or vif, texte encre */
   --bubble-r: #f4f6fb;
   --brand-light: var(--gold-300); /* accent posé sur l'encre */
   --brand-surface: color-mix(in srgb, var(--signal) 12%, transparent);
@@ -660,7 +660,7 @@
   --border: var(--hairline);
   --input: var(--hairline-strong);
   --muted-foreground: var(--on-ink-muted);
-  --brand-deep: var(--gold-300); /* l'or bruni ne tient pas sur l'encre : on éclaircit */
+  --brand-deep: var(--gold-300); /* sur l'encre, on prend l'or clair */
   --brand-surface: color-mix(in srgb, var(--gold-300) 16%, transparent);
   color: var(--on-ink);
 }
