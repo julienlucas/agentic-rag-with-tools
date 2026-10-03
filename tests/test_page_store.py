@@ -76,3 +76,37 @@ def test_read_pages_spans_consecutive_pages_with_a_cap():
     assert "error" in store.read_pages("AMD_2022_10K", 7, 9)
     docs = store.page_documents("AMD_2022_10K", 1, 2)
     assert [d.metadata["page"] for d in docs] == [1, 2] and all(d.metadata["origin"] == "read_page" for d in docs)
+
+
+TEN_K = {
+    "ACME_2022_10K": [
+        "# INDEX\nConsolidated Balance Sheets ..... 3",
+        "# PART II\n# **ITEM 8. FINANCIAL STATEMENTS**\n## ***Risk: a heading that is not a landmark***",
+        "# Consolidated Balance Sheets\n| | 2022 |\n| Cash | 4,835 |",
+        "## NOTE 5 – Income Taxes\nThe provision for income taxes was $122 million.\n# Note 5 – Income Taxes",
+    ],
+}
+
+
+def test_outline_keeps_structural_landmarks_cleaned_and_deduplicated():
+    out = PageStore(TEN_K).outline("ACME_2022_10K")
+    assert out["n_pages"] == 4
+    assert [(e["page"], e["title"]) for e in out["entries"]] == [
+        (1, "PART II"), (1, "ITEM 8. FINANCIAL STATEMENTS"),
+        (2, "Consolidated Balance Sheets"), (3, "NOTE 5 – Income Taxes"),
+    ]
+    # sans repère financier : repli sur les en-têtes de niveau 1
+    assert [e["title"] for e in PageStore(PAGES).outline("AMD_2022_10K")["entries"]] == ["Item 1. Business"]
+    assert "error" in PageStore(PAGES).outline("NOPE")
+
+
+def test_find_sections_matches_titles_only_with_all_words():
+    store = PageStore(TEN_K)
+    out = store.find_sections("ACME_2022_10K", "balance sheet")
+    # le sommaire (p. 1) mentionne le bilan dans le texte, pas dans un titre : écarté
+    assert [(h["page"], h["title"]) for h in out["hits"]] == [(2, "Consolidated Balance Sheets")]
+    assert out["hits"][0]["excerpt"].startswith("| | 2022 |")
+    assert store.find_sections("ACME_2022_10K", "income taxes")["total"] == 2
+    assert store.find_sections("ACME_2022_10K", "cash flows")["total"] == 0
+    assert "error" in store.find_sections("ACME_2022_10K", "  ")
+    assert "error" in store.find_sections("NOPE", "x")

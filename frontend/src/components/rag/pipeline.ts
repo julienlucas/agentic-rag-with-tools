@@ -48,7 +48,7 @@ export const pipelineSteps: PipelineStep[] = [
     key: "correct",
     label: "Recherche à outils",
     detail:
-      "Si le contexte ne suffit pas, le modèle enchaîne search / grep / read_page (5 appels max) ; chaque passage ramené est numéroté et s'ajoute après les 10 initiaux.",
+      "Si le contexte ne suffit pas, le modèle enchaîne search / grep / read_page / open_document / navigate (5 appels max) ; chaque passage ramené est numéroté et s'ajoute après les 10 initiaux.",
     model: "claude-sonnet-5",
     conditional: true,
     ms: 0,

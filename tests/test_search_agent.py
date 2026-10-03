@@ -52,7 +52,7 @@ def test_read_pages_come_first_then_reranked_search_results_after_protected_head
     out = agent.run("quick ratio d'AMD ?", retriever, head + [make_doc("tail")],
                     page_store=PageStore(PAGES))
 
-    assert llm.tool_names == ["search", "grep", "read_page"]
+    assert llm.tool_names == ["search", "grep", "read_page", "open_document", "navigate"]
     assert out["tool_calls"] == 3
     docs = out["documents"]
     # tête intouchable, dans le même ordre
@@ -196,3 +196,33 @@ def test_block_list_content_is_flattened_to_text():
     assert message_text(AIMessage(content="plain")) == "plain"
     assert message_text(AIMessage(content=[{"type": "text", "text": "a "}, {"type": "text", "text": "b"}])) == "a b"
     assert message_text(AIMessage(content=[])) == ""
+
+
+def test_open_document_and_navigate_point_to_pages_without_adding_passages():
+    pages = {"AMD_2022_10K": [
+        "# PART II\n# ITEM 8. FINANCIAL STATEMENTS",
+        "# Consolidated Balance Sheets\nCash 4,835\nCurrent liabilities 6,369",
+        "# NOTE 4 – Segment Reporting",
+    ]}
+    llm = FakeToolLLM([
+        [("open_document", {})],
+        [("open_document", {"doc": "amd"})],
+        [("navigate", {"doc": "AMD_2022_10K", "section": "balance sheet"})],
+        [("navigate", {"doc": "AMD_2022_10K", "section": "cash flows"})],
+        "Bilan p. 2.",
+    ])
+    out = SearchAgent(llm=llm).run("q", FakeRetriever(), _head(2), page_store=PageStore(pages))
+    tool_msgs = [m.content for m in llm.invocations[-1] if m.type == "tool"]
+    assert tool_msgs[0] == "- AMD_2022_10K (3 pages)"
+    assert tool_msgs[1].splitlines() == [
+        "AMD_2022_10K — 3 pages", "p. 1 : PART II", "p. 1 : ITEM 8. FINANCIAL STATEMENTS",
+        "p. 2 : Consolidated Balance Sheets", "p. 3 : NOTE 4 – Segment Reporting",
+    ]
+    assert tool_msgs[2].startswith("p. 2 : Consolidated Balance Sheets — Cash 4,835")
+    assert tool_msgs[3].startswith("Aucun titre ne contient « cash flows »")
+    assert out["queries"] == [
+        "open_document", "open_document: amd",
+        'navigate: "balance sheet" [AMD_2022_10K]', 'navigate: "cash flows" [AMD_2022_10K]',
+    ]
+    # navigation seulement : aucun passage ajouté après la tête
+    assert len(out["documents"]) == 2

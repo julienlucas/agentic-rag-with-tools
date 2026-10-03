@@ -14,6 +14,18 @@ const tools = [
     text: "Relance le retrieval hybride du pipeline (BM25 + vecteurs, routage, rerank Cohere) avec une requête reformulée, sur tout le corpus ou un seul document. 8 extraits, chacun avec son document et sa page.",
   },
   {
+    verb: "Ouvrir",
+    signature: "open_document(doc)",
+    mistral: "open",
+    text: "Le plan du rapport — PART, ITEM, états financiers consolidés, notes — avec la page de chaque section. Le modèle sait où chercher avant de chercher.",
+  },
+  {
+    verb: "Naviguer",
+    signature: "navigate(doc, section)",
+    mistral: "navigate",
+    text: "Une section par son titre : « consolidated balance sheet » mène à la page du bilan, là où grep renverrait aussi le sommaire et chaque renvoi.",
+  },
+  {
     verb: "Localiser",
     signature: "grep(pattern, doc)",
     mistral: "grep",
@@ -22,7 +34,7 @@ const tools = [
   {
     verb: "Lire",
     signature: "read_page(doc, page, end_page)",
-    mistral: "open + navigate + read",
+    mistral: "read",
     text: "La page entière telle que l'OCR l'a produite, tableau compris, sur 1 à 3 pages quand il est à cheval. Ce qu'un chunk de 1 200 caractères ne montre jamais.",
   },
 ];
@@ -85,8 +97,8 @@ export function Tools() {
     >
       {/* d'où ça vient */}
 
-      {/* les trois outils */}
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
+      {/* les cinq outils */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {tools.map((t, i) => (
           <div
             key={t.signature}

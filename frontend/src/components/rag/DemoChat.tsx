@@ -461,7 +461,7 @@ export function DemoChat({ children }: { children?: ReactNode }) {
                                 <p className="mt-3 flex gap-2 border-t border-hairline pt-3 text-xs text-muted-foreground">
                                   <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-deep" />
                                   Le modèle a jugé le contexte insuffisant et a
-                                  cherché lui-même (search, grep, read_page) avant
+                                  cherché lui-même (search, grep, read_page, navigate…) avant
                                   de répondre — le détail est dans le rapport.
                                 </p>
                               ) : null}

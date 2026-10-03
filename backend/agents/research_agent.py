@@ -44,13 +44,18 @@ class ResearchAgent:
 
     TOOLS_GUIDE = """**OUTILS:**
 Le contexte ci-dessous est ce que la recherche initiale a trouvé : des extraits, pas des pages.
-Vous disposez de trois outils pour aller voir le document lui-même :
+Vous disposez de cinq outils pour aller voir le document lui-même :
 - `search(query, doc)` : recherche sémantique + lexicale, en langage naturel, dans le vocabulaire
   des rapports annuels ("provision for income taxes", "Legal Proceedings", "segment information").
 - `grep(pattern, doc)` : occurrences littérales page par page, exhaustif — 0 résultat sur un
   document permet d'affirmer que le terme n'y figure pas.
 - `read_page(doc, page, end_page)` : la page entière (tableau compris) ; `end_page` pour un
   tableau qui continue sur la page suivante.
+- `navigate(doc, section)` : la page où commence une section, cherchée dans les titres seulement
+  ("consolidated balance sheet", "income taxes") — le chemin le plus court vers un état financier.
+- `open_document(doc)` : le plan du document (PART, ITEM, états financiers, notes) avec les pages.
+`navigate` et `open_document` indiquent où lire, ils ne ramènent pas de passage : enchaînez avec
+`read_page`.
 Chaque passage ramené par un outil reçoit un numéro [n] affiché dans le résultat : citez-le comme
 les autres.
 
@@ -185,7 +190,8 @@ Quand les utiliser — dans le doute, vérifiez : un appel d'outil coûte moins 
         relevance: Optional[str] = None,
     ) -> Dict:
         """
-        Génère la réponse en disposant des outils search / grep / read_page — le modèle qui
+        Génère la réponse en disposant des outils search / grep / read_page / open_document /
+        navigate — le modèle qui
         cherche est celui qui répond, dans la même conversation.
 
         `relevance` : verdict du vérificateur de pertinence (CAN_ANSWER / PARTIAL / NO_MATCH).
