@@ -164,7 +164,7 @@ function AnswerFeedback({ token, sessionId }: { token: string; sessionId: string
         disabled={state === "sending" || state === "done"}
         onClick={() => (score === 1 ? send(1) : (setVote(0), setState("comment")))}
         className={cn(
-          "inline-grid size-7 place-items-center rounded-sm border transition-colors cursor-pointer disabled:cursor-default",
+          "inline-grid size-7 cursor-pointer place-items-center rounded-sm border transition-colors",
           vote === score
             ? "border-brand bg-brand-surface text-brand-deep"
             : "border-transparent text-muted-foreground hover:border-hairline hover:text-brand-deep",
@@ -421,8 +421,9 @@ export function DemoChat({ children }: { children?: ReactNode }) {
         <div className="card-paper min-w-0 border-brand bg-white overflow-hidden">
           <div>
             {/* conversation */}
-            <div className="flex min-h-[28rem] flex-col">
-              <ScrollArea className="h-fit flex-1" viewportRef={viewport} data-lenis-prevent>
+            {/* hauteur figée à celle du chargement (exemple affiché) : la conversation défile dedans */}
+            <div className="flex h-[53rem] flex-col lg:h-[44.3rem]">
+              <ScrollArea className="min-h-0 flex-1" viewportRef={viewport} data-lenis-prevent>
                 <div className="space-y-5 p-5">
                   {showExample ? (
                     <div className="rise-in space-y-5">
