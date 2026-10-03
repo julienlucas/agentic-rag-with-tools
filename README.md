@@ -4,7 +4,7 @@
 Si vous appréciez, ajoutez une ⭐ au repo pour soutenir mon travail. 🙏
 
 Ce système RAG combine un récupérateur hybride (BM25 + embeddings dans Qdrant, reranking Cohere), un routage
-par document et un modèle de réponse équipé d'outils (`search` / `grep` / `read_page`), sur des
+par document et un modèle de réponse équipé d'outils (`search` / `grep` / `read_page` / `open_document` / `navigate`), sur des
 rapports SEC de 150 à 260 pages. Il est **mesuré** sur
 [FinanceBench](https://github.com/patronus-ai/financebench), le benchmark utilisé par Mistral pour
 évaluer Agentic Search (150 questions). Le résultat qui compte est l'ablation, à retrieval
@@ -23,22 +23,24 @@ Tous les chiffres sont reproductibles à partir des sorties dans
 Évalue si les passages récupérés répondent réellement à la question (CAN_ANSWER / PARTIAL / NO_MATCH). Son verdict ne bloque plus la génération : il est transmis au modèle de réponse comme indice (« le contexte initial a été jugé partiel, cherchez ce qui manque »).
 
 ### 2. **Agent de Recherche et de réponse, avec outils**
-Le modèle de génération reçoit les 10 meilleurs passages et les [trois outils](#les-outils) décrits plus bas. Il répond directement si le contexte suffit ; sinon il cherche — en voyant chaque résultat avant de décider du suivant, 5 appels au plus — et répond **dans la même conversation** : le modèle qui cherche est celui qui répond, comme dans l'[Agentic Search](https://mistral.ai/news/agentic-search/) de Mistral. Les outils sont disponibles sur **toutes** les questions ; le mode conditionnel (agent de recherche séparé, ou réécriture de la question) reste disponible pour comparaison via `GENERATOR_TOOLS_ENABLED` et `CORRECTIVE_MODE`.
+Le modèle de génération reçoit les 10 meilleurs passages et les [cinq outils](#les-outils) décrits plus bas. Il répond directement si le contexte suffit ; sinon il cherche — en voyant chaque résultat avant de décider du suivant, 5 appels au plus — et répond **dans la même conversation** : le modèle qui cherche est celui qui répond, comme dans l'[Agentic Search](https://mistral.ai/news/agentic-search/) de Mistral. Les outils sont disponibles sur **toutes** les questions ; le mode conditionnel (agent de recherche séparé, ou réécriture de la question) reste disponible pour comparaison via `GENERATOR_TOOLS_ENABLED` et `CORRECTIVE_MODE`.
 
 ### 3. **Génération contrainte**
 La réponse ne s'appuie que sur les passages numérotés — initiaux ou ramenés par les outils — avec une citation `[n]` après chaque affirmation, et refuse quand l'information n'y est pas. Deux règles de prompt tirées des runs FinanceBench : un ratio ou une marge dont les composantes sont dans le contexte se **calcule** (formule, chiffres cités, résultat) ; et « non disponible » ne s'écrit qu'après un `grep` sans résultat.
 
 ## Cet agent a des outils à dispo
 
-Trois opérations façon système de fichiers, données au modèle de réponse. Les pages OCR sont conservées entières (`backend/retriever/page_store.py`) à côté des chunks : les chunks servent à *trouver*, les pages à *lire*.
+Cinq opérations façon système de fichiers — les cinq de l'[Agentic Search de Mistral](https://mistral.ai/fr/news/agentic-search/) (search, open, navigate, read, grep) —, données au modèle de réponse. Les pages OCR sont conservées entières (`backend/retriever/page_store.py`) à côté des chunks : les chunks servent à *trouver*, les pages à *lire*.
 
 | Outil | Ce qu'il fait |
 |---|---|
 | `search(query, doc)` | Le retrieval hybride du pipeline (BM25 + vecteurs dans Qdrant, routage, rerank Cohere), relancé avec une nouvelle requête, optionnellement restreint à un document. Renvoie 8 extraits avec document et page. |
 | `grep(pattern, doc)` | Occurrences littérales d'un motif (regex, insensible à la casse), page par page, sur tout le document. Exhaustif : 0 résultat permet d'affirmer qu'un terme n'y figure pas. |
 | `read_page(doc, page, end_page)` | La page entière telle que l'OCR l'a produite, tableau compris — ce qu'un chunk de 1 200 caractères ne montre jamais. `end_page` lit 2 à 3 pages d'un coup pour un tableau à cheval. |
+| `open_document(doc)` | Le plan du document — PART, ITEM, états financiers consolidés, notes — avec la page de chaque section, et son nombre de pages. Sans `doc`, la liste des documents. Les niveaux d'en-têtes de l'OCR n'étant pas fiables (200 à 550 titres par 10-K), le plan retient les repères structurels par leur intitulé. |
+| `navigate(doc, section)` | La page où commence une section, cherchée dans les **titres** seulement (« consolidated balance sheet », « income taxes ») : là où `grep` renvoie aussi le sommaire et les renvois, `navigate` pointe l'état financier lui-même. |
 
-Chaque passage ramené par un outil reçoit un numéro `[n]`, affiché dans le résultat, que la réponse cite comme les autres. Les 10 passages initiaux gardent leurs numéros : les outils ne peuvent qu'**ajouter** après eux. Le rapport de vérification renvoyé avec chaque réponse liste les appels effectués.
+`open_document` et `navigate` indiquent où lire sans ramener de passage ; le modèle enchaîne avec `read_page`. Contrairement à Mistral, aucun document n'est « ouvert » entre deux appels : chaque outil reçoit `doc`. Chaque passage ramené par `search` ou `read_page` reçoit un numéro `[n]`, affiché dans le résultat, que la réponse cite comme les autres. Les 10 passages initiaux gardent leurs numéros : les outils ne peuvent qu'**ajouter** après eux. Le rapport de vérification renvoyé avec chaque réponse liste les appels effectués.
 
 ### Le système inclut un retriever hybride pour maximiser la pertinence
 - **Algo BM25 + Embeddings, côté Qdrant** : chaque chunk porte un vecteur sparse BM25 (précision lexicale) et un vecteur dense (sens contextuel) ; les deux recherches sont fusionnées par RRF dans une seule requête Qdrant. Métrique explicite (`VECTOR_SPACE = "cosine"`).
@@ -51,12 +53,12 @@ Claude et les embeddings passent, au choix (`MODEL_PROVIDER`), par **Amazon Bedr
 `eu-west-3`, par défaut) ou directement par les **API Anthropic et Cohere**. Les mêmes modèles
 dans les deux cas :
 - 💎 Claude Sonnet 4.6 (recherche à outils + génération) + Claude Haiku 4.5 (sous-agents : pertinence, routage, multi-query)
+- ⚖️ Évaluation, toujours sur Bedrock : Pixtral Large 25.02 (juge LLM) et Ministral 3 14B (answer relevancy, en eu-west-1). Des Mistral plutôt que Claude : le juge ne note pas sa propre famille
 - 🧠 Cohere Embed v4 (embeddings, 1024 dimensions) — identique des deux côtés : changer de fournisseur ne demande pas de réindexer
 
 Toujours par leur propre API :
 - ⚡ Mistral OCR (absent de Bedrock)
 - 🧠 Cohere Rerank 4 Pro
-- ⚖️ Mistral Large (juge LLM de l'évaluation, inchangé pour garder les scores comparables)
 - 🗄️ Qdrant Cloud (base vectorielle, un espace et un HNSW par utilisateur)
 
 ## Installation
@@ -135,7 +137,7 @@ Pour surveiller votre application avec LangSmith (si vous le souhaitez) :
 ```bash
 # Configuration LangSmith pour le monitoring
 LANGSMITH_API_KEY=votre_cle_api_langsmith_ici
-LANGSMITH_PROJECT=agentic_rag_multi_agent
+LANGSMITH_PROJECT=agentic-search
 ```
 
 4. **Lancer l'application** :

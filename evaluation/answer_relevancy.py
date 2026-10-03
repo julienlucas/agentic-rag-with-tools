@@ -15,8 +15,6 @@ import math
 import re
 from typing import List, Optional
 
-from langchain_mistralai import ChatMistralAI
-
 from backend.config.settings import settings
 from backend.utils.resilience import is_rate_limit
 from evaluation.llm_judge import FinanceBenchJudge
@@ -69,14 +67,10 @@ class AnswerRelevancy:
 
     def _get_llm(self):
         if self.llm is None:
-            self.llm = ChatMistralAI(
-                model="mistral-small-latest",  # métrique d'éval : reste sur Mistral, comme le juge
-                api_key=settings.MISTRALAI_API_KEY,
-                temperature=0,
-                max_tokens=300,
-                timeout=settings.LLM_TIMEOUT,
-                max_retries=settings.LLM_MAX_RETRIES,
-            )
+            from backend.llm.bedrock import chat_model
+            # Métrique d'éval : sur un Mistral de Bedrock, comme le juge (voir settings).
+            self.llm = chat_model(settings.EVAL_RELEVANCY_MODEL_ID, max_tokens=300,
+                                  region=settings.EVAL_RELEVANCY_REGION)
         return self.llm
 
     def _get_embeddings(self):

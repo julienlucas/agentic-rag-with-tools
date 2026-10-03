@@ -136,7 +136,11 @@ uv run python evaluation/financebench/prepare.py   # assemble et construit l'ind
 
 ### Protocole FinanceBench (comparable au chiffre public de Mistral)
 
-Chaque réponse reçoit un verdict ternaire d'un juge LLM :
+Chaque réponse reçoit un verdict ternaire d'un juge LLM, Pixtral Large 25.02 sur Bedrock
+(`EVAL_JUDGE_MODEL_ID`). Jusqu'au 3 octobre 2026, c'était `mistral-large-latest` par l'API
+Mistral : rejugées par Pixtral Large, les 26 réponses du run `outputs_5tools/` reçoivent le
+même verdict (26/26). Bedrock n'a pas de Mistral Large récent ; Pixtral Large en reprend la base
+(Mistral Large 2).
 
 - **`accuracy`** — réponses `CORRECT` (tolérante aux écarts de format, d'unité et d'arrondi).
 - **`hallucination_rate`** — réponses `INCORRECT` : le système répond avec assurance **et** se
@@ -171,11 +175,11 @@ dénominateur, pour ne pas les confondre avec des refus.
   réponse s'en tient-elle aux extraits fournis ? Ce n'est pas la faithfulness de RAGAS
   (vérification affirmation par affirmation), mais un signal global.
 - **`mean_answer_relevancy`** (0-1) — la réponse traite-t-elle la question posée ? Méthode RAGAS
-  (`evaluation/answer_relevancy.py`) : Mistral Small écrit 3 questions auxquelles la réponse
-  répond, et on prend la similarité cosinus moyenne (Mistral Embed) avec la question d'origine.
+  (`evaluation/answer_relevancy.py`) : Ministral 3 14B (Bedrock, eu-west-1, `EVAL_RELEVANCY_MODEL_ID`) écrit 3 questions auxquelles la réponse
+  répond, et on prend la similarité cosinus moyenne (Cohere Embed v4, les embeddings du pipeline) avec la question d'origine.
   Un refus ou une réponse évasive vaut 0. Elle ne regarde pas la référence : une réponse fausse
   mais centrée sur la question score haut ; c'est le verdict du juge qui dit si elle est juste.
-  Coût : un appel Mistral Small par réponse. `--no-answer-relevancy` la désactive.
+  Coût : un appel Ministral 3 par réponse. `--no-answer-relevancy` la désactive.
 
 Sur les réponses sauvegardées du run du 4 septembre (calcul a posteriori, même code) :
 

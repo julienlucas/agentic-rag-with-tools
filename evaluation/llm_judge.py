@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
-from langchain_mistralai import ChatMistralAI
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -115,14 +113,8 @@ class FinanceBenchJudge:
 
     def _get_llm(self):
         if self.llm is None:
-            self.llm = ChatMistralAI(
-                model=self.model,
-                api_key=settings.MISTRALAI_API_KEY,
-                temperature=0,
-                max_tokens=250,
-                timeout=settings.LLM_TIMEOUT,
-                max_retries=settings.LLM_MAX_RETRIES,
-            )
+            from backend.llm.bedrock import chat_model
+            self.llm = chat_model(self.model, max_tokens=250, region=settings.EVAL_JUDGE_REGION)
         return self.llm
 
     @staticmethod

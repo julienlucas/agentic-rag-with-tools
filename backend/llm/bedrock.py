@@ -17,7 +17,7 @@ variables passent avant le `.env` pour load_dotenv et pydantic. Sans clés dans 
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import boto3
 from dotenv import dotenv_values
@@ -68,12 +68,17 @@ def runtime_client(read_timeout: int = None):
     return _client("bedrock-runtime", _region(), read_timeout or settings.LLM_TIMEOUT)
 
 
-def chat_model(model_id: str, max_tokens: int, temperature: float = 0.0) -> ChatBedrockConverse:
-    """Modèle sans réflexion (Haiku 4.5) : classification, reformulation, routage."""
+def chat_model(model_id: str, max_tokens: int, temperature: float = 0.0,
+               region: Optional[str] = None) -> ChatBedrockConverse:
+    """
+    Modèle sans réflexion (Haiku 4.5) : classification, reformulation, routage.
+    `region` : pour un modèle absent de la région du projet (Ministral 3 de l'évaluation).
+    """
+    region = region or _region()
     return ChatBedrockConverse(
         model=model_id,
-        client=runtime_client(),
-        region_name=_region(),
+        client=_client("bedrock-runtime", region, settings.LLM_TIMEOUT),
+        region_name=region,
         max_tokens=max_tokens,
         temperature=temperature,
     )

@@ -34,7 +34,7 @@ def log_to_langsmith(name: str, summary: Dict, inputs: Dict):
         print("⚠️  LANGSMITH_API_KEY non défini, skip logging")
         return None
 
-    project = os.getenv("LANGSMITH_PROJECT", "agentic_rag_multi_agent_evals")
+    project = os.getenv("LANGSMITH_PROJECT", "agentic-search-evals")
     try:
         client = Client()
         run_id = uuid.uuid4()

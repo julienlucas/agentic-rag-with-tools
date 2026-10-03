@@ -48,11 +48,21 @@ class Settings(BaseSettings):
     REASONING_MAX_TOKENS: int = 8000
     REASONING_TIMEOUT: int = 90  # la réflexion allonge les appels, 30 s ne suffit pas
 
-    # OCR : Mistral OCR par son API (absent de Bedrock). Le juge de l'évaluation reste aussi
-    # sur Mistral Large, pour que les scores FinanceBench restent comparables aux runs passés.
+    # OCR : Mistral OCR par son API (absent de Bedrock).
     MISTRALAI_API_KEY: Optional[str] = os.getenv("MISTRALAI_API_KEY")
     MODEL_OCR_ID: str = "mistral-ocr-latest"
-    EVAL_JUDGE_MODEL_ID: str = "mistral-large-latest"
+
+    # Évaluation, sur Bedrock quel que soit MODEL_PROVIDER, avec des modèles Mistral (pas
+    # Claude : le juge ne doit pas noter les réponses de sa propre famille). Bedrock n'a ni
+    # Mistral Large récent ni Mistral Small :
+    #  - juge : Pixtral Large 25.02 (base Mistral Large 2), profil « eu. » appelable de Paris ;
+    #  - answer relevancy : Ministral 3 14B, absent d'eu-west-3, appelé en eu-west-1.
+    # Changement de juge le 3 oct. 2026 (avant : mistral-large-latest par l'API Mistral) : les
+    # runs antérieurs ne sont pas comparables aux suivants.
+    EVAL_JUDGE_MODEL_ID: str = "eu.mistral.pixtral-large-2502-v1:0"
+    EVAL_JUDGE_REGION: Optional[str] = None  # None = AWS_REGION
+    EVAL_RELEVANCY_MODEL_ID: str = "mistral.ministral-3-14b-instruct"
+    EVAL_RELEVANCY_REGION: Optional[str] = "eu-west-1"
 
     # Timeouts et retries sur les appels LLM (évite les blocages de 2min)
     LLM_TIMEOUT: int = 30  # secondes par appel

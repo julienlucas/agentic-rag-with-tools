@@ -20,7 +20,7 @@ if settings.LANGSMITH_API_KEY:
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
     os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
-    os.environ["LANGCHAIN_PROJECT"] = "agentic_rag_multi_agent"
+    os.environ["LANGCHAIN_PROJECT"] = "agentic-search"
 
 # Les documents vivent dans Qdrant, un espace par tenant. En attendant l'authentification,
 # le tenant est le session_id envoyé par le client : ce n'est PAS une isolation réelle
