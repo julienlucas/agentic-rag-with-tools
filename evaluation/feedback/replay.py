@@ -24,14 +24,14 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.config.settings import settings  # noqa: E402  (charge aussi le .env)
-from evaluation.feedback.collect import DATASET  # noqa: E402
+from backend.feedback_dataset import DATASET, cited_passages  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 LAST_RUN = HERE / "last_run.json"  # non versionné : contient les questions des utilisateurs
@@ -111,7 +111,6 @@ def summarize(rows: List[Dict]) -> Dict:
 # ---------------------------------------------------------------------------
 
 def _context(answer: str, citations: List[Dict]) -> str:
-    from evaluation.feedback.collect import cited_passages
     return cited_passages(answer, citations, max_chars=6000)
 
 

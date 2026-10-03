@@ -11,7 +11,7 @@ from .retriever.builder import RetrieverBuilder
 from .retriever.page_store import PageStore
 from .vectorstore import QuotaExceeded, get_store
 from .agents.workflow import AgentWorkflow
-from . import feedback
+from . import feedback, feedback_dataset
 from .config import constants
 from .config.settings import settings
 from .utils.logging import logger
@@ -284,4 +284,5 @@ def submit_feedback(request):
     except Exception as e:
         logger.error(f"Envoi du vote à LangSmith impossible: {e}")
         return JsonResponse({"error": "Vote non enregistré, réessayez plus tard."}, status=502)
+    feedback_dataset.collect_in_background(run_id, score, comment)
     return JsonResponse({"message": "Merci pour votre retour"})

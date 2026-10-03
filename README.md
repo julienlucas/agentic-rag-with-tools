@@ -152,13 +152,16 @@ Sous chaque réponse, un 👍 / 👎 (le 👎 ouvre un commentaire facultatif). 
 `question`, et le vote devient un feedback `user_score` (1 / 0) sur cette trace. Le navigateur ne voit
 qu'un jeton signé qui lie la trace à son espace : en production, définir `DJANGO_SECRET_KEY`.
 
-1. **Récolter** : `uv run python evaluation/feedback/collect.py` range les votes dans le dataset
-   LangSmith « Retours utilisateurs », une fois par trace. Un 👍 y entre avec sa réponse comme
-   référence. Un 👎 y entre avec sa réponse rejetée et le commentaire en métadonnées.
+1. **Récolter** : chaque vote est rangé automatiquement, en arrière-plan, dans le dataset LangSmith
+   « Retours utilisateurs » (`backend/feedback_dataset.py`), quelques secondes après le clic, le temps
+   que la trace arrive. Un 👍 y entre avec sa réponse comme référence. Un 👎 y entre avec sa réponse
+   rejetée et le commentaire en métadonnées. `uv run python evaluation/feedback/collect.py` rattrape les
+   votes manqués (redémarrage du serveur, LangSmith indisponible), sans doublon.
+   `FEEDBACK_AUTO_COLLECT=false` coupe le rangement automatique.
 2. **Analyser** : chaque 👎 reçoit une cause d'échec proposée par le juge (Mistral, pas Claude) :
    `mauvais_document`, `passage_manquant`, `erreur_lecture`, `erreur_calcul`, `refus_a_tort`,
    `hors_corpus`, `forme` ou `autre`. Elle est aussi posée en feedback `failure_category` sur la trace,
-   et `collect.py` affiche la répartition. La cause dit où corriger : routage, retrieval, prompt ou outils.
+   et `collect.py` affiche la répartition de ce qu'il rattrape. La cause dit où corriger : routage, retrieval, prompt ou outils.
 3. **Corriger** : `uv run python evaluation/feedback/replay.py` rejoue les exemples qui ont une
    référence, sur les mêmes documents du même espace, et les juge. Un 👍 qui n'est plus retrouvé est
    une **régression** (code de sortie 1). Un 👎 dont on a écrit la bonne réponse dans `outputs.answer`

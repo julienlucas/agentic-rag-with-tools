@@ -11,6 +11,7 @@ os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
 os.environ.setdefault("COHERE_API_KEY", "test-key")
 os.environ.setdefault("QDRANT_URL", "")  # tests : jamais le cluster réel
 os.environ.setdefault("LANGSMITH_API_KEY", "")
+os.environ.setdefault("FEEDBACK_AUTO_COLLECT", "false")  # pas de thread vers LangSmith en test
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))

@@ -70,6 +70,9 @@ class Settings(BaseSettings):
 
     # Tracking LangSmith (si besoin)
     LANGSMITH_API_KEY: Optional[str] = None  # optionnel : le README le dit, le code ne le permettait pas
+    # Chaque vote est rangé en arrière-plan dans le dataset « Retours utilisateurs »
+    # (backend/feedback_dataset.py) ; evaluation/feedback/collect.py rattrape les manqués.
+    FEEDBACK_AUTO_COLLECT: bool = True
 
     # Paramètres optionnels avec valeurs par défaut
 
